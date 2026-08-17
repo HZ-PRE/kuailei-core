@@ -1,1 +1,1 @@
-# hiddify-next-core
+# kuailei-next-core
