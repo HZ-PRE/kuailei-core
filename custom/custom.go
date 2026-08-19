@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"unsafe"
 
 	"github.com/HZ-PRE/kuailei-core/bridge"
@@ -17,6 +18,10 @@ import (
 
 	"github.com/sagernet/sing-box/log"
 )
+
+func init() {
+	runtime.LockOSThread()
+}
 
 //export setupOnce
 func setupOnce(api unsafe.Pointer) {

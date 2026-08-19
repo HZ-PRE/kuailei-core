@@ -7,7 +7,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/kardianos/service v1.2.2
 	github.com/sagernet/gomobile v0.1.13
-	github.com/sagernet/sing v0.4.2
+	github.com/sagernet/sing v0.4.3
 	github.com/sagernet/sing-box v1.8.9
 	github.com/sagernet/sing-dns v0.2.3
 	github.com/spf13/cobra v1.8.0
@@ -18,7 +18,20 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/HZ-PRE/sing-box v1.0.2 // indirect
+require (
+	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344 // indirect
+	github.com/imkira/go-observer/v2 v2.0.0-20230629064422-8e0b61f11f1b // indirect
+	github.com/metacubex/tfo-go v0.0.0-20240821025650-e9be0afd5e7d // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pion/dtls/v2 v2.2.7 // indirect
+	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/randutil v0.1.0 // indirect
+	github.com/pion/stun/v2 v2.0.0 // indirect
+	github.com/pion/transport/v2 v2.2.3 // indirect
+	github.com/pion/transport/v3 v3.0.1 // indirect
+	github.com/pion/turn/v3 v3.0.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+)
 
 require (
 	berty.tech/go-libtor v1.0.385 // indirect
@@ -69,17 +82,16 @@ require (
 	github.com/sagernet/cloudflare-tls v0.0.0-20231208171750-a4483c1b7cd1 // indirect
 	github.com/sagernet/gvisor v0.0.0-20240428053021-e691de28565f // indirect
 	github.com/sagernet/netlink v0.0.0-20240523065131-45e60152f9ba // indirect
-	github.com/sagernet/quic-go v0.46.0-beta.4 // indirect
+	github.com/sagernet/quic-go v0.47.0-beta.2 // indirect
 	github.com/sagernet/reality v0.0.0-20230406110435-ee17307e7691 // indirect
 	github.com/sagernet/sing-mux v0.2.0 // indirect
 	github.com/sagernet/sing-quic v0.2.2 // indirect
 	github.com/sagernet/sing-shadowsocks v0.2.7 // indirect
-	github.com/sagernet/sing-shadowsocks2 v0.2.0 // indirect
+	github.com/sagernet/sing-shadowsocks2 v0.2.1 // indirect
 	github.com/sagernet/sing-shadowtls v0.1.4 // indirect
-	github.com/sagernet/sing-tun v0.3.2 // indirect
+	github.com/sagernet/sing-tun v0.3.3 // indirect
 	github.com/sagernet/sing-vmess v0.1.12 // indirect
 	github.com/sagernet/smux v0.0.0-20231208180855-7041f6ea79e7 // indirect
-	github.com/sagernet/tfo-go v0.0.0-20231209031829-7b5343ac1dc6 // indirect
 	github.com/sagernet/utls v1.5.4 // indirect
 	github.com/sagernet/wireguard-go v0.0.0-20231215174105-89dec3b2f3e8 // indirect
 	github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854 // indirect
@@ -107,7 +119,7 @@ require (
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
 
-replace github.com/sagernet/sing-box => ./sing-box
+replace github.com/sagernet/sing-box => ../kuailei-sing-box
 
 replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-20240902024714-0fcb0895bb4b
 
@@ -115,6 +127,8 @@ replace github.com/sagernet/wireguard-go => github.com/hiddify/wireguard-go v0.0
 
 replace github.com/bepass-org/warp-plus => github.com/hiddify/warp-plus v0.0.0-20240717223357-4f3122e0d11d
 
-replace github.com/hiddify/ray2sing => github.com/hiddify/ray2sing v0.0.0-20240807031953-a9df25615108
+replace github.com/hiddify/ray2sing => github.com/hiddify/ray2sing v0.0.0-20240928221833-190b549d5222
 
 replace github.com/sagernet/tfo-go => github.com/metacubex/tfo-go v0.0.0-20241231083714-66613d49c422
+
+replace github.com/sagernet/sing-shadowsocks2 => ../sing-shadowsocks2

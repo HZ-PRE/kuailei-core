@@ -60,8 +60,7 @@ func BuildConfigJson(configOpt ConfigOptions, input option.Options) (string, err
 
 // TODO include selectors
 func BuildConfig(opt ConfigOptions, input option.Options) (*option.Options, error) {
-	fmt.Printf("config options: %++v\n", opt)
-
+	// fmt.Printf("config options: %++v\n", opt)
 	var options option.Options
 	if opt.EnableFullConfig {
 		options.Inbounds = input.Inbounds
@@ -258,7 +257,7 @@ func setOutbounds(options *option.Options, input *option.Options, opt *ConfigOpt
 				DirectOptions: option.DirectOutboundOptions{
 					DialerOptions: option.DialerOptions{
 						TCPFastOpen: false,
-						TLSFragment: &option.TLSFragmentOptions{
+						TLSFragment: option.TLSFragmentOptions{
 							Enabled: true,
 							Size:    opt.TLSTricks.FragmentSize,
 							Sleep:   opt.TLSTricks.FragmentSleep,
