@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/HZ-PRE/kuailei-core/utils"
+	"github.com/hiddify/hiddify-core/v2/hutils"
 	"github.com/spf13/cobra"
 )
 
@@ -11,11 +11,11 @@ var commandGenerateCertification = &cobra.Command{
 	Use:   "gen-cert",
 	Short: "Generate certification for web server",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := os.MkdirAll("cert", 0644)
+		err := os.MkdirAll("cert", 0o644)
 		if err != nil {
 			panic("Error: " + err.Error())
 		}
-		utils.GenerateCertificate("cert/server-cert.pem", "cert/server-key.pem", true)
-		utils.GenerateCertificate("cert/client-cert.pem", "cert/client-key.pem", false)
+		hutils.GenerateCertificateFile("data/cert/server-cert.pem", "data/cert/server-key.pem", true, true)
+		hutils.GenerateCertificateFile("data/cert/client-cert.pem", "data/cert/client-key.pem", false, true)
 	},
 }

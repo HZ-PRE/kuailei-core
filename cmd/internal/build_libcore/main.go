@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/HZ-PRE/kuailei-core/cmd/internal/build_shared"
+	"github.com/hiddify/hiddify-core/cmd/internal/build_shared"
 	_ "github.com/sagernet/gomobile"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common/rw"
@@ -42,7 +42,7 @@ var (
 	iosTags     []string
 )
 
-const libName = "libcore"
+const libName = "hiddify-core"
 
 func init() {
 	sharedFlags = append(sharedFlags, "-trimpath")
@@ -201,7 +201,7 @@ func buildIOS() {
 	args = append(args, "-tags")
 	args = append(args, strings.Join(tags, ","))
 
-	output := filepath.Join("bin", "Libcore.xcframework")
+	output := filepath.Join("bin", "Libhcore.xcframework")
 	args = append(args, "-o", output, "github.com/sagernet/sing-box/experimental/libbox", "./mobile")
 
 	command := exec.Command(build_shared.GoBinPath+"/gomobile", args...)
