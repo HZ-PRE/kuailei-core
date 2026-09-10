@@ -4,47 +4,76 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/sagernet/sing-box/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func logLevel(level LogLevel, msg string) {
-	switch level {
-	case LogLevel_FATAL:
-		log.Error(msg)
-	case LogLevel_TRACE:
-		log.Trace(msg)
-	case LogLevel_DEBUG:
-		log.Debug(msg)
-	case LogLevel_INFO:
-		log.Info(msg)
-	case LogLevel_WARNING:
-		log.Warn(msg)
-	case LogLevel_ERROR:
-		log.Error(msg)
-	default:
-		log.Debug(msg)
-	}
+const asyncLogBufferSize = 1024
+
+type asyncLogEntry struct {
+	level LogLevel
+	typ   LogType
+	time  time.Time
+	args  []any
 }
+
+var (
+	asyncLogOnce    sync.Once
+	asyncLogQueue   = make(chan asyncLogEntry, asyncLogBufferSize)
+	asyncLogDropped atomic.Uint64
+)
+
 func Log(level LogLevel, typ LogType, message ...any) {
 	if level < static.logLevel {
 		return
 	}
-	// if static.debug {
-	msg := fmt.Sprintf("H %v %v", typ, fmt.Sprint(message...))
-	logLevel(level, msg)
-	// fmt.Printf("%v %v %v\n", level, typ, fmt.Sprint(message...))
-	// os.Stderr.WriteString(fmt.Sprintf("%v %v %v\n", level, typ, fmt.Sprint(message...)))
-	// }
+	asyncLogOnce.Do(func() {
+		go drainAsyncLogs()
+	})
 
+	entry := asyncLogEntry{
+		level: level,
+		typ:   typ,
+		time:  time.Now(),
+		args:  append([]any(nil), message...),
+	}
+	select {
+	case asyncLogQueue <- entry:
+	default:
+		asyncLogDropped.Add(1)
+	}
+}
+
+func drainAsyncLogs() {
+	for entry := range asyncLogQueue {
+		writeAsyncLog(entry)
+	}
+}
+
+func writeAsyncLog(entry asyncLogEntry) {
+	if dropped := asyncLogDropped.Swap(0); dropped > 0 {
+		publishLogMessage(
+			LogLevel_WARNING,
+			LogType_CORE,
+			time.Now(),
+			fmt.Sprintf("dropped %d log messages because the async log queue is full", dropped),
+		)
+	}
+
+	message := fmt.Sprint(entry.args...)
+	publishLogMessage(entry.level, entry.typ, entry.time, message)
+}
+
+func publishLogMessage(level LogLevel, typ LogType, timestamp time.Time, message string) {
 	static.logObserver.Publish(&LogMessage{
 		Level:   level,
 		Type:    typ,
-		Time:    timestamppb.New(time.Now()),
-		Message: fmt.Sprint(message...),
+		Time:    timestamppb.New(timestamp),
+		Message: message,
 	})
 }
 

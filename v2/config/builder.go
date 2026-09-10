@@ -40,8 +40,8 @@ const (
 	OutboundBypassTag = "bypass §hide§"
 	// OutboundBlockTag          = "block §hide§"
 	OutboundSelectTag         = "select"
-	OutboundURLTestTag        = "lowest"
-	OutboundRoundRobinTag     = "balance"
+	OutboundURLTestTag        = "自动选择"
+	OutboundRoundRobinTag     = "极速模式"
 	OutboundDNSTag            = "dns-out §hide§"
 	OutboundDirectFragmentTag = "direct-fragment §hide§"
 
@@ -151,12 +151,9 @@ func setOutbounds(options *option.Options, input *option.Options, opt *HiddifyOp
 		switch out.Type {
 		case C.TypeBlock, C.TypeDNS:
 			continue
-		case C.TypeSelector, C.TypeURLTest:
-			continue
 		case C.TypeCustom:
 			continue
 		default:
-
 			if contains([]string{"direct", "bypass", "block"}, out.Tag) {
 				continue
 			}
@@ -261,9 +258,9 @@ func setOutbounds(options *option.Options, input *option.Options, opt *HiddifyOp
 	// 		URLs:      opt.ConnectionTestUrls,
 	// 		Interval:  badoption.Duration(opt.URLTestInterval.Duration()),
 	// 		// IdleTimeout: badoption.Duration(opt.URLTestIdleTimeout.Duration()),
-	// 		Tolerance:                 1,
+	// 		Tolerance:                 50,
 	// 		IdleTimeout:               badoption.Duration(opt.URLTestInterval.Duration().Nanoseconds() * 3),
-	// 		InterruptExistConnections: true,
+	// 		InterruptExistConnections: false,
 	// 	},
 	// }
 	urlTest := option.Outbound{
@@ -314,9 +311,9 @@ func setOutbounds(options *option.Options, input *option.Options, opt *HiddifyOp
 			selectorTags = append([]string{urlTest.Tag}, selectorTags...)
 			defaultSelect = urlTest.Tag
 		} else {
-			outbounds = append([]option.Outbound{balancer, urlTest}, outbounds...)
+			outbounds = append([]option.Outbound{urlTest, balancer}, outbounds...)
 			selectorTags = append([]string{urlTest.Tag, balancer.Tag}, selectorTags...)
-			defaultSelect = balancer.Tag
+			defaultSelect = urlTest.Tag
 
 		}
 	}
@@ -685,45 +682,55 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 		)
 	}
 
-	// for _, rule := range opt.Rules {
-	// 	routeRule := rule.MakeRule()
-	// 	switch rule.Outbound {
-	// 	case "bypass":
-	// 		routeRule.Outbound = OutboundBypassTag
-	// 	case "block":
-	// 		routeRule.Outbound = OutboundBlockTag
-	// 	case "proxy":
-	// 		routeRule.Outbound = OutboundMainProxyTag
-	// 	}
+	for _, rule := range hopt.Rules {
+		outbound_name := rule.Outbound
+		switch rule.Outbound {
+		case "bypass":
+			outbound_name = OutboundBypassTag
+		case "direct":
+			outbound_name = OutboundDirectTag
+		case "proxy":
+			outbound_name = OutboundSelectTag
+		}
 
-	// 	if routeRule.IsValid() {
-	// 		routeRules = append(
-	// 			routeRules,
-	// 			option.Rule{
-	// 				Type:           C.RuleTypeDefault,
-	// 				DefaultOptions: routeRule,
-	// 			},
-	// 		)
-	// 	}
+		if rule.Enabled {
+			routeRules = append(routeRules, option.Rule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultRule{
+					RawDefaultRule: option.RawDefaultRule{
+						Domain:        rule.Domains,
+						DomainSuffix:  rule.DomainSuffixes,
+						DomainKeyword: rule.DomainKeywords,
+						DomainRegex:   rule.DomainRegexes,
+					},
+					RuleAction: option.RuleAction{
+						Action: C.RuleActionTypeRoute,
+						RouteOptions: option.RouteActionOptions{
+							Outbound: outbound_name,
+						},
+					},
+				},
+			})
+		}
 
-	// 	dnsRule := rule.MakeDNSRule()
-	// 	switch rule.Outbound {
-	// 	case "bypass":
-	// 		dnsRule.Server = DNSDirectTag
-	// 	case "block":
-	// 		dnsRule.Server = DNSBlockTag
-	// 		dnsRule.DisableCache = true
-	// 	case "proxy":
-	// 		if opt.EnableFakeDNS {
-	// 			fakeDnsRule := dnsRule
-	// 			fakeDnsRule.Server = DNSFakeTag
-	// 			fakeDnsRule.Inbound = []string{InboundTUNTag, InboundMixedTag}
-	// 			dnsRules = append(dnsRules, fakeDnsRule)
-	// 		}
-	// 		dnsRule.Server = DNSRemoteTag
-	// 	}
-	// 	dnsRules = append(dnsRules, dnsRule)
-	// }
+		// dnsRule := rule.MakeDNSRule()
+		// switch rule.Outbound {
+		// case "bypass":
+		// 	dnsRule.Server = DNSDirectTag
+		// case "block":
+		// 	dnsRule.Server = DNSBlockTag
+		// 	dnsRule.DisableCache = true
+		// case "proxy":
+		// 	if opt.EnableFakeDNS {
+		// 		fakeDnsRule := dnsRule
+		// 		fakeDnsRule.Server = DNSFakeTag
+		// 		fakeDnsRule.Inbound = []string{InboundTUNTag, InboundMixedTag}
+		// 		dnsRules = append(dnsRules, fakeDnsRule)
+		// 	}
+		// 	dnsRule.Server = DNSRemoteTag
+		// }
+		// dnsRules = append(dnsRules, dnsRule)
+	}
 	forceDirectRoute := make([]string, 0)
 	if options.NTP != nil && options.NTP.Enabled {
 		forceDirectRoute = append(forceDirectRoute, options.NTP.Server)
@@ -784,7 +791,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geosite-ads",
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-category-ads-all.srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-category-ads-all.srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -794,7 +801,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geosite-malware",
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-malware.srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-malware.srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -804,7 +811,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geosite-phishing",
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-phishing.srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-phishing.srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -814,7 +821,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geosite-cryptominers",
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-cryptominers.srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-cryptominers.srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -824,7 +831,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geoip-phishing",
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-phishing.srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geoip-phishing.srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -834,7 +841,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geoip-malware",
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-malware.srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geoip-malware.srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -927,7 +934,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geoip-" + hopt.Region,
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/country/geoip-" + hopt.Region + ".srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/country/geoip-" + hopt.Region + ".srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},
@@ -937,7 +944,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			Tag:    "geosite-" + hopt.Region,
 			Format: C.RuleSetFormatBinary,
 			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/country/geosite-" + hopt.Region + ".srs",
+				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/country/geosite-" + hopt.Region + ".srs",
 				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
 				DownloadDetour: OutboundSelectTag,
 			},

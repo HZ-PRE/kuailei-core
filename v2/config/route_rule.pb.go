@@ -7,10 +7,11 @@
 package config
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -20,58 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Outbound int32
-
-const (
-	Outbound_proxy                Outbound = 0
-	Outbound_direct               Outbound = 1
-	Outbound_direct_with_fragment Outbound = 2
-	Outbound_block                Outbound = 3
-)
-
-// Enum value maps for Outbound.
-var (
-	Outbound_name = map[int32]string{
-		0: "proxy",
-		1: "direct",
-		2: "direct_with_fragment",
-		3: "block",
-	}
-	Outbound_value = map[string]int32{
-		"proxy":                0,
-		"direct":               1,
-		"direct_with_fragment": 2,
-		"block":                3,
-	}
-)
-
-func (x Outbound) Enum() *Outbound {
-	p := new(Outbound)
-	*p = x
-	return p
-}
-
-func (x Outbound) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Outbound) Descriptor() protoreflect.EnumDescriptor {
-	return file_v2_config_route_rule_proto_enumTypes[0].Descriptor()
-}
-
-func (Outbound) Type() protoreflect.EnumType {
-	return &file_v2_config_route_rule_proto_enumTypes[0]
-}
-
-func (x Outbound) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Outbound.Descriptor instead.
-func (Outbound) EnumDescriptor() ([]byte, []int) {
-	return file_v2_config_route_rule_proto_rawDescGZIP(), []int{0}
-}
-
+type Outbound string
 type Network int32
 
 const (
@@ -234,7 +184,7 @@ type Rule struct {
 	ListOrder        uint32     `protobuf:"varint,1,opt,name=list_order,proto3" json:"list_order,omitempty"`
 	Enabled          bool       `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	Name             string     `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Outbound         Outbound   `protobuf:"varint,4,opt,name=outbound,proto3,enum=config.Outbound" json:"outbound,omitempty"`
+	Outbound         string     `protobuf:"varint,4,opt,name=outbound,proto3,enum=config.Outbound" json:"outbound,omitempty"`
 	RuleSets         []string   `protobuf:"bytes,5,rep,name=rule_sets,json=rule_set,proto3" json:"rule_sets,omitempty"`
 	PackageNames     []string   `protobuf:"bytes,6,rep,name=package_names,json=package_name,proto3" json:"package_names,omitempty"`
 	ProcessNames     []string   `protobuf:"bytes,7,rep,name=process_names,json=process_name,proto3" json:"process_names,omitempty"`
@@ -302,13 +252,6 @@ func (x *Rule) GetName() string {
 		return x.Name
 	}
 	return ""
-}
-
-func (x *Rule) GetOutbound() Outbound {
-	if x != nil {
-		return x.Outbound
-	}
-	return Outbound_proxy
 }
 
 func (x *Rule) GetRuleSets() []string {
