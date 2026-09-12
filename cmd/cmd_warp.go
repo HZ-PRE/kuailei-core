@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hiddify/hiddify-core/v2/config"
+	"github.com/HZ-PRE/kuailei-core/v2/config"
 	T "github.com/sagernet/sing-box/option"
-	"github.com/sagernet/wireguard-go/hiddify"
+	"github.com/sagernet/wireguard-go/sdm"
 	"github.com/spf13/cobra"
 )
 
@@ -116,7 +116,7 @@ func generateWarp() (*T.Outbound, error) {
 	_, _, wg, err := config.GenerateWarpInfo("", "", "")
 
 	// fmt.Printf("%v", wgConfig)
-	singboxConfig, err := config.GenerateWarpSingbox(*wg, "", 0, &hiddify.NoiseOptions{})
+	singboxConfig, err := config.GenerateWarpSingbox(*wg, "", 0, &sdm.NoiseOptions{})
 	singboxJSON, err := json.MarshalIndent(singboxConfig, "", "    ")
 	if err != nil {
 		fmt.Println("Error marshaling Singbox configuration:", err)

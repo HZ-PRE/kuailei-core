@@ -3,15 +3,15 @@ package ray2sing
 import (
 	"strconv"
 
-	"github.com/sagernet/wireguard-go/hiddify"
+	"github.com/sagernet/wireguard-go/sdm"
 )
 
-func convertRange(s string) hiddify.Range {
-	r := hiddify.Range{}
+func convertRange(s string) sdm.Range {
+	r := sdm.Range{}
 	r.UnmarshalJSON([]byte(strconv.Quote(s)))
 	return r
 }
-func getWireGuardNoise(d map[string]string, addDefault bool) hiddify.NoiseOptions {
+func getWireGuardNoise(d map[string]string, addDefault bool) sdm.NoiseOptions {
 	fake_packet_count := convertRange(getOneOfN(d, "", "ifp", "wnoisecount"))
 
 	fake_packet_delay := convertRange(getOneOfN(d, "", "ifpd", "wnoisedelay"))
@@ -29,10 +29,10 @@ func getWireGuardNoise(d map[string]string, addDefault bool) hiddify.NoiseOption
 		if addDefault {
 			return defaultWireguardNoiseOptions()
 		}
-		return hiddify.NoiseOptions{}
+		return sdm.NoiseOptions{}
 	}
-	return hiddify.NoiseOptions{
-		FakePacket: hiddify.FakePacketOptions{
+	return sdm.NoiseOptions{
+		FakePacket: sdm.FakePacketOptions{
 			Enabled: true,
 			Count:   fake_packet_count,
 			Size:    fake_packet_size,
@@ -42,9 +42,9 @@ func getWireGuardNoise(d map[string]string, addDefault bool) hiddify.NoiseOption
 	}
 }
 
-func defaultWireguardNoiseOptions() hiddify.NoiseOptions {
-	return hiddify.NoiseOptions{
-		FakePacket: hiddify.FakePacketOptions{
+func defaultWireguardNoiseOptions() sdm.NoiseOptions {
+	return sdm.NoiseOptions{
+		FakePacket: sdm.FakePacketOptions{
 			Enabled: true,
 			Count:   convertRange("2-10"),
 			Size:    convertRange("30-50"),

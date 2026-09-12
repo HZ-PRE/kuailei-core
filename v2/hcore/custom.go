@@ -1,7 +1,7 @@
 package hcore
 
 import (
-	"github.com/hiddify/hiddify-core/v2/config"
+	"github.com/HZ-PRE/kuailei-core/v2/config"
 	"github.com/sagernet/sing-box/log"
 )
 

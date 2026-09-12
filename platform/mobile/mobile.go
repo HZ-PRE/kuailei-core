@@ -1,7 +1,7 @@
 package mobile
 
 import (
-	hcore "github.com/hiddify/hiddify-core/v2/hcore"
+	hcore "github.com/HZ-PRE/kuailei-core/v2/hcore"
 
 	_ "net/http/pprof"
 

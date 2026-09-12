@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/hiddify/hiddify-core/cmd"
+	"github.com/HZ-PRE/kuailei-core/cmd"
 )
 
 // type UpdateRequest struct {

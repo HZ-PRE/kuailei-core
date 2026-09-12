@@ -3,7 +3,7 @@ package hcore
 import (
 	"os"
 
-	"github.com/hiddify/hiddify-core/v2/service_manager"
+	"github.com/HZ-PRE/kuailei-core/v2/service_manager"
 	daemon "github.com/sagernet/sing-box/daemon"
 	"github.com/sagernet/sing-box/log"
 )

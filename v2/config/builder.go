@@ -2,6 +2,7 @@ package config
 
 import (
 	context "context"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"math/rand"
@@ -12,13 +13,13 @@ import (
 	sync "sync"
 	"time"
 
-	"github.com/hiddify/hiddify-core/v2/hutils"
+	"github.com/HZ-PRE/kuailei-core/v2/hutils"
 	mDNS "github.com/miekg/dns"
 	C "github.com/sagernet/sing-box/constant"
 	sdns "github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/json/badoption"
-	"github.com/sagernet/wireguard-go/hiddify"
+	"github.com/sagernet/wireguard-go/sdm"
 )
 
 const (
@@ -61,7 +62,7 @@ var (
 )
 
 // TODO include selectors
-func BuildConfig(ctx context.Context, hopts *HiddifyOptions, inputOpt *ReadOptions) (*option.Options, error) {
+func BuildConfig(ctx context.Context, hopts *SdmOptions, inputOpt *ReadOptions) (*option.Options, error) {
 
 	input, err := ReadSingOptions(ctx, inputOpt)
 	if err != nil {
@@ -89,7 +90,7 @@ func BuildConfig(ctx context.Context, hopts *HiddifyOptions, inputOpt *ReadOptio
 		return nil, err
 	}
 
-	if err := setRoutingOptions(&options, hopts); err != nil {
+	if err := setRoutingOptions(&options, hopts, input.Route); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +128,7 @@ func getHostnameIfNotIP(inp string) (string, error) {
 	return "", fmt.Errorf("not a hostname: %s", inp)
 }
 
-func setOutbounds(options *option.Options, input *option.Options, opt *HiddifyOptions, staticIPs *map[string][]string) error {
+func setOutbounds(options *option.Options, input *option.Options, opt *SdmOptions, staticIPs *map[string][]string) error {
 	var outbounds []option.Outbound
 	var endpoints []option.Endpoint
 	var tags []string
@@ -167,7 +168,7 @@ func setOutbounds(options *option.Options, input *option.Options, opt *HiddifyOp
 				tags = append(tags, out.Tag)
 			}
 			// OutboundWARPConfigDetour = OutboundSelectTag
-			out = *patchHiddifyWarpFromConfig(&out, *opt)
+			out = *patchSdmWarpFromConfig(&out, *opt)
 			outbounds = append(outbounds, out)
 		}
 	}
@@ -175,13 +176,13 @@ func setOutbounds(options *option.Options, input *option.Options, opt *HiddifyOp
 	if opt.Warp.EnableWarp {
 		// wg := getOrGenerateWarpLocallyIfNeeded(&opt.Warp)
 
-		// out, err := GenerateWarpSingbox(wg, opt.Warp.CleanIP, opt.Warp.CleanPort, &option.WireGuardHiddify{
+		// out, err := GenerateWarpSingbox(wg, opt.Warp.CleanIP, opt.Warp.CleanPort, &option.WireGuardSdm{
 		// 	FakePackets:      opt.Warp.FakePackets,
 		// 	FakePacketsSize:  opt.Warp.FakePacketSize,
 		// 	FakePacketsDelay: opt.Warp.FakePacketDelay,
 		// 	FakePacketsMode:  opt.Warp.FakePacketMode,
 		// })
-		out, err := GenerateWarpSingboxNew("p1", &hiddify.NoiseOptions{})
+		out, err := GenerateWarpSingboxNew("p1", &sdm.NoiseOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to generate warp config: %v", err)
 		}
@@ -375,7 +376,7 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-func setExperimental(options *option.Options, hopt *HiddifyOptions) {
+func setExperimental(options *option.Options, hopt *SdmOptions) {
 	if len(hopt.ConnectionTestUrls) == 0 {
 		hopt.ConnectionTestUrls = []string{hopt.ConnectionTestUrl, "http://captive.apple.com/generate_204", "https://cp.cloudflare.com", "https://google.com/generate_204"}
 		if isBlockedConnectionTestUrl(hopt.ConnectionTestUrl) {
@@ -411,7 +412,7 @@ func setExperimental(options *option.Options, hopt *HiddifyOptions) {
 	}
 }
 
-func setLog(options *option.Options, opt *HiddifyOptions) {
+func setLog(options *option.Options, opt *SdmOptions) {
 	options.Log = &option.LogOptions{
 		Level:        opt.LogLevel,
 		Output:       opt.LogFile,
@@ -427,7 +428,7 @@ func isIPv6Supported() bool {
 	_, err := net.ResolveIPAddr("ip6", "::1")
 	return err == nil
 }
-func setInbound(options *option.Options, hopt *HiddifyOptions) {
+func setInbound(options *option.Options, hopt *SdmOptions) {
 	// var inboundDomainStrategy option.DomainStrategy
 	// if !opt.ResolveDestination {
 	// 	inboundDomainStrategy = option.DomainStrategy(dns.DomainStrategyAsIS)
@@ -559,7 +560,7 @@ func setInbound(options *option.Options, hopt *HiddifyOptions) {
 	}
 }
 
-func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
+func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *option.RouteOptions) error {
 	dnsRules := []option.DefaultDNSRule{}
 	routeRules := []option.Rule{}
 	rulesets := []option.RuleSet{}
@@ -572,7 +573,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 
 	// 	// 		DefaultOptions: option.DefaultRule{
 	// 	// 			Inbound:     []string{InboundTUNTag},
-	// 	// 			PackageName: []string{"app.hiddify.com"},
+	// 	// 			PackageName: []string{"app.sdm.com"},
 	// 	// 			Outbound:    OutboundBypassTag,
 	// 	// 		},
 	// 	// 	},
@@ -584,7 +585,7 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 	// 	// 	option.Rule{
 	// 	// 		Type: C.RuleTypeDefault,
 	// 	// 		DefaultOptions: option.DefaultRule{
-	// 	// 			ProcessName: []string{"Hiddify", "Hiddify.exe", "HiddifyCli", "HiddifyCli.exe"},
+	// 	// 			ProcessName: []string{"Sdm", "Sdm.exe", "SdmCli", "SdmCli.exe"},
 	// 	// 			Outbound:    OutboundBypassTag,
 	// 	// 		},
 	// 	// 	},
@@ -682,36 +683,17 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 		)
 	}
 
+	appRuleSetTags := make(map[string]string)
 	for _, rule := range hopt.Rules {
-		outbound_name := rule.Outbound
-		switch rule.Outbound {
-		case "bypass":
-			outbound_name = OutboundBypassTag
-		case "direct":
-			outbound_name = OutboundDirectTag
-		case "proxy":
-			outbound_name = OutboundSelectTag
+		if !rule.Enabled {
+			continue
 		}
-
-		if rule.Enabled {
-			routeRules = append(routeRules, option.Rule{
-				Type: C.RuleTypeDefault,
-				DefaultOptions: option.DefaultRule{
-					RawDefaultRule: option.RawDefaultRule{
-						Domain:        rule.Domains,
-						DomainSuffix:  rule.DomainSuffixes,
-						DomainKeyword: rule.DomainKeywords,
-						DomainRegex:   rule.DomainRegexes,
-					},
-					RuleAction: option.RuleAction{
-						Action: C.RuleActionTypeRoute,
-						RouteOptions: option.RouteActionOptions{
-							Outbound: outbound_name,
-						},
-					},
-				},
-			})
+		convertedRule, newRuleSets, err := convertAppRouteRule(rule, appRuleSetTags)
+		if err != nil {
+			return err
 		}
+		routeRules = append(routeRules, convertedRule)
+		rulesets = append(rulesets, newRuleSets...)
 
 		// dnsRule := rule.MakeDNSRule()
 		// switch rule.Outbound {
@@ -730,6 +712,9 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 		// 	dnsRule.Server = DNSRemoteTag
 		// }
 		// dnsRules = append(dnsRules, dnsRule)
+	}
+	if inputRoute != nil {
+		routeRules = append(routeRules, inputRoute.Rules...)
 	}
 	forceDirectRoute := make([]string, 0)
 	if options.NTP != nil && options.NTP.Enabled {
@@ -984,6 +969,9 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 			},
 		})
 	}
+	if inputRoute != nil {
+		rulesets = appendUniqueRuleSets(rulesets, inputRoute.RuleSet)
+	}
 	options.Route = &option.RouteOptions{
 		Rules:               routeRules,
 		Final:               OutboundMainDetour,
@@ -1111,7 +1099,102 @@ func setRoutingOptions(options *option.Options, hopt *HiddifyOptions) error {
 	return nil
 }
 
-func patchHiddifyWarpFromConfig(out *option.Outbound, opt HiddifyOptions) *option.Outbound {
+func convertAppRouteRule(rule Rule, knownRuleSets map[string]string) (option.Rule, []option.RuleSet, error) {
+	outboundName := OutboundSelectTag
+	ruleActionType := C.RuleActionTypeRoute
+	switch rule.Outbound {
+	case Outbound_direct:
+		outboundName = OutboundDirectTag
+	case Outbound_direct_with_fragment:
+		outboundName = OutboundDirectFragmentTag
+	case Outbound_block:
+		ruleActionType = C.RuleActionTypeReject
+	}
+
+	ruleAction := option.RuleAction{Action: ruleActionType}
+	if ruleActionType == C.RuleActionTypeRoute {
+		ruleAction.RouteOptions.Outbound = outboundName
+	}
+
+	network := []string{}
+	if rule.Network != Network_all {
+		network = append(network, rule.Network.String())
+	}
+	protocols := make([]string, 0, len(rule.Protocols))
+	for _, protocol := range rule.Protocols {
+		protocols = append(protocols, protocol.String())
+	}
+
+	ruleSetTags := make([]string, 0, len(rule.RuleSets))
+	newRuleSets := make([]option.RuleSet, 0, len(rule.RuleSets))
+	for _, ruleSetURL := range rule.RuleSets {
+		tag, exists := knownRuleSets[ruleSetURL]
+		if !exists {
+			parsedURL, err := url.ParseRequestURI(ruleSetURL)
+			if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
+				return option.Rule{}, nil, fmt.Errorf("invalid app route rule-set URL %q", ruleSetURL)
+			}
+			digest := sha256.Sum256([]byte(ruleSetURL))
+			tag = fmt.Sprintf("app-rule-set-%x", digest[:6])
+			format := C.RuleSetFormatBinary
+			if strings.HasSuffix(strings.ToLower(parsedURL.Path), ".json") {
+				format = C.RuleSetFormatSource
+			}
+			knownRuleSets[ruleSetURL] = tag
+			newRuleSets = append(newRuleSets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    tag,
+				Format: format,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            ruleSetURL,
+					UpdateInterval: badoption.Duration(24 * time.Hour),
+					DownloadDetour: OutboundSelectTag,
+				},
+			})
+		}
+		ruleSetTags = append(ruleSetTags, tag)
+	}
+
+	return option.Rule{
+		Type: C.RuleTypeDefault,
+		DefaultOptions: option.DefaultRule{
+			RawDefaultRule: option.RawDefaultRule{
+				Network:         network,
+				Protocol:        protocols,
+				Domain:          rule.Domains,
+				DomainSuffix:    rule.DomainSuffixes,
+				DomainKeyword:   rule.DomainKeywords,
+				DomainRegex:     rule.DomainRegexes,
+				IPCIDR:          rule.IpCidrs,
+				SourceIPCIDR:    rule.SourceIpCidrs,
+				PortRange:       rule.PortRanges,
+				SourcePortRange: rule.SourcePortRanges,
+				ProcessName:     rule.ProcessNames,
+				ProcessPath:     rule.ProcessPaths,
+				PackageName:     rule.PackageNames,
+				RuleSet:         ruleSetTags,
+			},
+			RuleAction: ruleAction,
+		},
+	}, newRuleSets, nil
+}
+
+func appendUniqueRuleSets(base []option.RuleSet, additions []option.RuleSet) []option.RuleSet {
+	knownTags := make(map[string]struct{}, len(base)+len(additions))
+	for _, ruleSet := range base {
+		knownTags[ruleSet.Tag] = struct{}{}
+	}
+	for _, ruleSet := range additions {
+		if _, exists := knownTags[ruleSet.Tag]; exists {
+			continue
+		}
+		knownTags[ruleSet.Tag] = struct{}{}
+		base = append(base, ruleSet)
+	}
+	return base
+}
+
+func patchSdmWarpFromConfig(out *option.Outbound, opt SdmOptions) *option.Outbound {
 	if out.Type == C.TypePsiphon {
 		return out
 	}
@@ -1222,7 +1305,7 @@ func generateRandomString(length int) string {
 	randomBytes := make([]byte, bytesNeeded)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		return "hiddify"
+		return "sdm"
 	}
 
 	// Encode random bytes to base64

@@ -8,7 +8,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/hiddify/hiddify-core/cmd"
+	"github.com/HZ-PRE/kuailei-core/cmd"
 )
 
 //export parseCli

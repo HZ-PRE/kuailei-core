@@ -1,7 +1,7 @@
 FROM alpine:latest
 ENV CONFIG='https://raw.githubusercontent.com/ircfspace/warpsub/main/export/warp#WARP%20(IRCF)'
 ENV VERSION=v4.1.0
-WORKDIR /hiddify
+WORKDIR /sdm
 RUN apk add  curl tar gzip libc6-compat # iptables ip6tables
 
 RUN echo "architecture: $(apk --print-arch)" && \    
@@ -15,11 +15,11 @@ RUN echo "architecture: $(apk --print-arch)" && \
             s390x) ARCH=s390x ;; \
             *) echo "Unsupported architecture: $(apk --print-arch) $(uname -m)" && exit 1 ;; \
         esac && \
-        echo "Downloading https://github.com/hiddify/hiddify-core/releases/download/${VERSION}/hiddify-core-linux-$ARCH.tar.gz" && \
-        curl -L -o hiddify-core.tar.gz https://github.com/hiddify/hiddify-core/releases/download/${VERSION}/hiddify-core-linux-$ARCH.tar.gz && \
-        tar -xzf hiddify-core.tar.gz && rm hiddify-core.tar.gz
-COPY hiddify.sh .
-RUN chmod +x hiddify.sh
+        echo "Downloading https://github.com/HZ-PRE/kuailei-core/releases/download/${VERSION}/sdm-core-linux-$ARCH.tar.gz" && \
+        curl -L -o sdm-core.tar.gz https://github.com/HZ-PRE/kuailei-core/releases/download/${VERSION}/sdm-core-linux-$ARCH.tar.gz && \
+        tar -xzf sdm-core.tar.gz && rm sdm-core.tar.gz
+COPY sdm.sh .
+RUN chmod +x sdm.sh
 
 EXPOSE 12334
 EXPOSE 12335
@@ -28,4 +28,4 @@ EXPOSE 12335
 EXPOSE 12337
 
 
-ENTRYPOINT [ "/hiddify/hiddify.sh" ]
+ENTRYPOINT [ "/sdm/sdm.sh" ]

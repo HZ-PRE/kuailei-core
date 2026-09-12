@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hiddify/hiddify-core/v2/config"
+	"github.com/HZ-PRE/kuailei-core/v2/config"
 	"golang.org/x/net/proxy"
 
 	"github.com/sagernet/sing-box/option"
@@ -24,35 +24,35 @@ func getRandomAvailblePort() uint16 {
 	return uint16(listener.Addr().(*net.TCPAddr).Port)
 }
 
-func RunInstanceString(ctx context.Context, hiddifySettings *config.HiddifyOptions, proxiesInput string) (*HiddifyInstance, error) {
-	if hiddifySettings == nil {
-		hiddifySettings = config.DefaultHiddifyOptions()
+func RunInstanceString(ctx context.Context, sdmSettings *config.SdmOptions, proxiesInput string) (*SdmInstance, error) {
+	if sdmSettings == nil {
+		sdmSettings = config.DefaultSdmOptions()
 	}
 
-	singconfigs, err := config.ParseConfig(ctx, &config.ReadOptions{Content: proxiesInput}, true, hiddifySettings, false)
+	singconfigs, err := config.ParseConfig(ctx, &config.ReadOptions{Content: proxiesInput}, true, sdmSettings, false)
 	if err != nil {
 		return nil, err
 	}
-	return RunInstance(ctx, hiddifySettings, singconfigs)
+	return RunInstance(ctx, sdmSettings, singconfigs)
 }
 
-func RunInstance(ctx context.Context, hiddifySettings *config.HiddifyOptions, singconfig *option.Options) (*HiddifyInstance, error) {
-	if hiddifySettings == nil {
-		hiddifySettings = config.DefaultHiddifyOptions()
+func RunInstance(ctx context.Context, sdmSettings *config.SdmOptions, singconfig *option.Options) (*SdmInstance, error) {
+	if sdmSettings == nil {
+		sdmSettings = config.DefaultSdmOptions()
 	}
-	hiddifySettings.EnableClashApi = false
-	hiddifySettings.InboundOptions.MixedPort = getRandomAvailblePort()
-	hiddifySettings.InboundOptions.EnableTun = false
-	hiddifySettings.InboundOptions.EnableTunService = false
-	hiddifySettings.InboundOptions.SetSystemProxy = false
-	hiddifySettings.InboundOptions.TProxyPort = 0
-	hiddifySettings.InboundOptions.DirectPort = 0
-	hiddifySettings.InboundOptions.RedirectPort = 0
-	hiddifySettings.Region = "other"
-	hiddifySettings.BlockAds = false
-	hiddifySettings.LogFile = "/dev/null"
+	sdmSettings.EnableClashApi = false
+	sdmSettings.InboundOptions.MixedPort = getRandomAvailblePort()
+	sdmSettings.InboundOptions.EnableTun = false
+	sdmSettings.InboundOptions.EnableTunService = false
+	sdmSettings.InboundOptions.SetSystemProxy = false
+	sdmSettings.InboundOptions.TProxyPort = 0
+	sdmSettings.InboundOptions.DirectPort = 0
+	sdmSettings.InboundOptions.RedirectPort = 0
+	sdmSettings.Region = "other"
+	sdmSettings.BlockAds = false
+	sdmSettings.LogFile = "/dev/null"
 
-	finalConfigs, err := config.BuildConfig(ctx, hiddifySettings, &config.ReadOptions{Options: singconfig})
+	finalConfigs, err := config.BuildConfig(ctx, sdmSettings, &config.ReadOptions{Options: singconfig})
 	if err != nil {
 		return nil, err
 	}
@@ -63,24 +63,24 @@ func RunInstance(ctx context.Context, hiddifySettings *config.HiddifyOptions, si
 	}
 
 	<-time.After(250 * time.Millisecond)
-	hservice := &HiddifyInstance{
+	hservice := &SdmInstance{
 		StartedService: instance,
-		ListenPort:     hiddifySettings.InboundOptions.MixedPort}
+		ListenPort:     sdmSettings.InboundOptions.MixedPort}
 	hservice.PingCloudflare()
 	return hservice, nil
 }
 
 // dialer, err := s.libbox.GetInstance().Router().Dialer(context.Background())
 
-func (s *HiddifyInstance) Close() error {
+func (s *SdmInstance) Close() error {
 	return s.StartedService.CloseService()
 }
 
-func (s *HiddifyInstance) GetContent(url string) (string, error) {
+func (s *SdmInstance) GetContent(url string) (string, error) {
 	return s.ContentFromURL("GET", url, 10*time.Second)
 }
 
-func (s *HiddifyInstance) ContentFromURL(method string, url string, timeout time.Duration) (string, error) {
+func (s *SdmInstance) ContentFromURL(method string, url string, timeout time.Duration) (string, error) {
 	if method == "" {
 		return "", fmt.Errorf("empty method")
 	}
@@ -129,15 +129,15 @@ func (s *HiddifyInstance) ContentFromURL(method string, url string, timeout time
 	return string(body), nil
 }
 
-func (s *HiddifyInstance) PingCloudflare() (time.Duration, error) {
+func (s *SdmInstance) PingCloudflare() (time.Duration, error) {
 	return s.Ping("http://cp.cloudflare.com")
 }
 
-// func (s *HiddifyService) RawConnection(ctx context.Context, url string) (net.Conn, error) {
+// func (s *SdmService) RawConnection(ctx context.Context, url string) (net.Conn, error) {
 // 	return
 // }
 
-func (s *HiddifyInstance) PingAverage(url string, count int) (time.Duration, error) {
+func (s *SdmInstance) PingAverage(url string, count int) (time.Duration, error) {
 	if count <= 0 {
 		return -1, fmt.Errorf("count must be greater than 0")
 	}
@@ -157,7 +157,7 @@ func (s *HiddifyInstance) PingAverage(url string, count int) (time.Duration, err
 	return time.Duration(sum / real_count * int(time.Millisecond)), nil
 }
 
-func (s *HiddifyInstance) Ping(url string) (time.Duration, error) {
+func (s *SdmInstance) Ping(url string) (time.Duration, error) {
 	startTime := time.Now()
 	_, err := s.ContentFromURL("HEAD", url, 4*time.Second)
 	if err != nil {

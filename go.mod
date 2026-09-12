@@ -1,4 +1,4 @@
-module github.com/hiddify/hiddify-core
+module github.com/HZ-PRE/kuailei-core
 
 go 1.25.6
 
@@ -41,6 +41,7 @@ require (
 	github.com/Psiphon-Labs/psiphon-tunnel-core v1.0.11-0.20260202154140-a3384a551c62 // indirect
 	github.com/Psiphon-Labs/quic-go v0.0.0-20250527153145-79fe45fb83b1 // indirect
 	github.com/Psiphon-Labs/utls v0.0.0-20260129182755-24497d415a8d // indirect
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa // indirect
 	github.com/ameshkov/dnscrypt/v2 v2.4.0 // indirect
@@ -93,7 +94,6 @@ require (
 	github.com/google/nftables v0.2.1-0.20240414091927-5e242ec57806 // indirect
 	github.com/grafov/m3u8 v0.0.0-20171211212457-6ab8f28ed427 // indirect
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
-	github.com/hiddify/hmrd_multi_resolver_dns v0.0.0-20260429114007-8d809dc33d0e // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/josharian/native v1.1.1-0.20230202152459-5c7d0dd6ab86 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
@@ -175,6 +175,7 @@ require (
 	github.com/sagernet/nftables v0.3.0-mod.2 // indirect
 	github.com/sagernet/sing-cloudflared v0.0.0-20260416083718-efa6ab16dba9 // indirect
 	github.com/sagernet/tailscale v1.92.4-sing-box-1.13-mod.7 // indirect
+	github.com/sdm/hmrd_multi_resolver_dns v0.0.0-20260429114007-8d809dc33d0e // indirect
 	github.com/sergeyfrolov/bsbuffer v0.0.0-20180903213811-94e85abb8507 // indirect
 	github.com/shadowsocks/go-shadowsocks2 v0.1.5 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
@@ -274,39 +275,41 @@ require (
 )
 
 require (
-	github.com/hiddify/ray2sing v0.0.0-20260209214534-63c82f8c23a6
 	github.com/quic-go/quic-go v0.59.0
 	github.com/sagernet/sing-box v1.13.0
+	github.com/sdm/ray2sing v0.0.0-20260209214534-63c82f8c23a6
 	github.com/showwin/speedtest-go v1.7.10
 	github.com/stretchr/testify v1.11.1
 	github.com/xmdhs/clash2singbox v0.2.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-// replace github.com/sagernet/sing-box => github.com/hiddify/hiddify-sing-box v1.13.0-rc.2.0.20260209222802-dd10a2129de7
+// replace github.com/sagernet/sing-box => github.com/sdm/sdm-sing-box v1.13.0-rc.2.0.20260209222802-dd10a2129de7
 
-// replace github.com/xtls/xray-core => github.com/hiddify/xray-core v0.0.0-20260124181826-59e6569c13e9
+// replace github.com/xtls/xray-core => github.com/sdm/xray-core v0.0.0-20260124181826-59e6569c13e9
 
-replace github.com/bepass-org/warp-plus => github.com/hiddify/warp-plus v0.0.0-20240717223357-4f3122e0d11d
+replace github.com/bepass-org/warp-plus => ./third_party/warp-plus
 
 replace github.com/sagernet/sing-dns => github.com/shtorm-7/sing-dns v0.4.6-extended-1.0.0
 
 replace github.com/ameshkov/dnscrypt/v2 => github.com/shtorm-7/dnscrypt/v2 v2.4.0-extended-1.0.0
 
-replace github.com/hiddify/ray2sing => ./ray2sing
+replace github.com/sdm/ray2sing => ./ray2sing
 
-replace github.com/sagernet/sing-box => ./hiddify-sing-box
+replace github.com/sagernet/sing-box => ./sdm-sing-box
 
 replace github.com/sagernet/sing-vmess => github.com/starifly/sing-vmess v0.2.7-mod.9
 
-replace github.com/sagernet/wireguard-go => ./hiddify-sing-box/replace/wireguard-go
+replace github.com/sagernet/wireguard-go => ./sdm-sing-box/replace/wireguard-go
 
-replace github.com/sagernet/tailscale => ./hiddify-sing-box/replace/tailscale
+replace github.com/sagernet/tailscale => ./sdm-sing-box/replace/tailscale
 
-replace github.com/Psiphon-Labs/quic-go => ./hiddify-sing-box/replace/psiphon-quic-go
+replace github.com/Psiphon-Labs/quic-go => ./sdm-sing-box/replace/psiphon-quic-go
 
-replace github.com/Psiphon-Labs/psiphon-tls => ./hiddify-sing-box/replace/psiphon-tls
+replace github.com/Psiphon-Labs/psiphon-tls => ./sdm-sing-box/replace/psiphon-tls
 
-replace github.com/net2share/vaydns => github.com/hiddify/vaydns v0.0.0-20260401180616-890dc987a6a9
+replace github.com/net2share/vaydns => ./third_party/vaydns
 
-replace github.com/kianmhz/GooseRelayVPN => github.com/hiddify/GooseRelayVPN v0.0.0-20260429125124-0e68c2a3ae4c
+replace github.com/kianmhz/GooseRelayVPN => ./third_party/GooseRelayVPN
+
+replace github.com/sdm/hmrd_multi_resolver_dns => ./third_party/hmrd_multi_resolver_dns

@@ -9,7 +9,7 @@ import (
 
 type outboundMap map[string]interface{}
 
-func patchOutboundMux(base option.Outbound, configOpt HiddifyOptions, obj outboundMap) outboundMap {
+func patchOutboundMux(base option.Outbound, configOpt SdmOptions, obj outboundMap) outboundMap {
 	if configOpt.Mux.Enable {
 		multiplex := option.OutboundMultiplexOptions{
 			Enabled:    true,
@@ -24,7 +24,7 @@ func patchOutboundMux(base option.Outbound, configOpt HiddifyOptions, obj outbou
 	return obj
 }
 
-func patchOutboundTLSTricks(base option.Outbound, configOpt HiddifyOptions) option.Outbound {
+func patchOutboundTLSTricks(base option.Outbound, configOpt SdmOptions) option.Outbound {
 	if base.Type == C.TypeSelector || base.Type == C.TypeURLTest || base.Type == C.TypeBlock || base.Type == C.TypeDNS {
 		return base
 	}
@@ -85,7 +85,7 @@ func patchOutboundTLSTricks(base option.Outbound, configOpt HiddifyOptions) opti
 	return base
 }
 
-func patchOutboundFragment(base option.Outbound, configOpt HiddifyOptions) option.Outbound {
+func patchOutboundFragment(base option.Outbound, configOpt SdmOptions) option.Outbound {
 	if configOpt.TLSTricks.EnableFragment {
 		if opts, ok := base.Options.(option.DialerOptionsWrapper); ok {
 			dialer := opts.TakeDialerOptions()
@@ -124,7 +124,7 @@ func isOutboundReality(base option.Outbound) bool {
 	return tls.Reality.Enabled
 }
 
-func patchEndpoint(base *option.Endpoint, configOpt HiddifyOptions, staticIPs *map[string][]string) (*option.Endpoint, error) {
+func patchEndpoint(base *option.Endpoint, configOpt SdmOptions, staticIPs *map[string][]string) (*option.Endpoint, error) {
 	formatErr := func(err error) error {
 		return fmt.Errorf("error patching outbound[%s][%s]: %w", base.Tag, base.Type, err)
 	}
@@ -134,7 +134,7 @@ func patchEndpoint(base *option.Endpoint, configOpt HiddifyOptions, staticIPs *m
 	}
 	return base, nil
 }
-func patchOutbound(base option.Outbound, configOpt HiddifyOptions, staticIPs *map[string][]string) (*option.Outbound, error) {
+func patchOutbound(base option.Outbound, configOpt SdmOptions, staticIPs *map[string][]string) (*option.Outbound, error) {
 
 	base = patchOutboundTLSTricks(base, configOpt)
 
@@ -147,7 +147,7 @@ func patchOutbound(base option.Outbound, configOpt HiddifyOptions, staticIPs *ma
 	return &base, nil
 }
 
-// func patchOutboundXray(base option.Outbound, configOpt HiddifyOptions, staticIpsDns map[string][]string) outboundMap {
+// func patchOutboundXray(base option.Outbound, configOpt SdmOptions, staticIpsDns map[string][]string) outboundMap {
 // 	if base.Type == C.TypeXray {
 // 		if opts, ok := base.Options.(option.XrayOutboundOptions); ok {
 // 			if opts.DeprecatedXrayOutboundJson != nil {
@@ -182,7 +182,7 @@ func patchOutbound(base option.Outbound, configOpt HiddifyOptions, staticIPs *ma
 // 			dnsConfig = map[string]any{}
 // 		}
 // 		if dnsConfig["tag"] == nil {
-// 			dnsConfig["tag"] = "hiddify-dns-out"
+// 			dnsConfig["tag"] = "sdm-dns-out"
 // 		}
 // 		// Ensure "servers" key exists and is a slice
 // 		servers, ok := dnsConfig["servers"].([]any)

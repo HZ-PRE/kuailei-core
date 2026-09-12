@@ -3,7 +3,7 @@ package ray2sing_test
 import (
 	"testing"
 
-	"github.com/hiddify/ray2sing/ray2sing"
+	"github.com/HZ-PRE/ray2sing/ray2sing"
 )
 
 func TestShadowsocks(t *testing.T) {
@@ -27,7 +27,6 @@ func TestShadowsocks(t *testing.T) {
 	`
 	ray2sing.CheckUrlAndJson(url, expectedJSON, t)
 }
-
 
 func TestShadowsocksEIHBase64(t *testing.T) {
 	// EIH extension: https://github.com/Shadowsocks-NET/shadowsocks-specs/blob/main/2022-2-shadowsocks-2022-extensible-identity-headers.md
@@ -53,7 +52,6 @@ func TestShadowsocksEIHBase64(t *testing.T) {
 
 	ray2sing.CheckUrlAndJson(url, expectedJSON, t)
 }
-
 
 func TestShadowsocksEIHPlain(t *testing.T) {
 	// EIH extension: https://github.com/Shadowsocks-NET/shadowsocks-specs/blob/main/2022-2-shadowsocks-2022-extensible-identity-headers.md

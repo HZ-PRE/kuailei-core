@@ -1,6 +1,6 @@
 # ray2sing
 
-Small library to convert v2ray/xray configuration links to sing-box format. Intended for use in [Hiddify Next](https://github.com/hiddify/hiddify-next).
+Small library to convert v2ray/xray configuration links to sing-box format. Intended for use in [Sdm Next](https://github.com/sdm/sdm-next).
 
 ## Acknowledgements
 

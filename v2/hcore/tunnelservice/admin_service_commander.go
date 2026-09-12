@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"time"
 
-	hcommon "github.com/hiddify/hiddify-core/v2/hcommon"
-	hutils "github.com/hiddify/hiddify-core/v2/hutils"
+	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
+	hutils "github.com/HZ-PRE/kuailei-core/v2/hutils"
 	grpc "google.golang.org/grpc"
 )
 
@@ -148,11 +148,11 @@ func getTunnelServicePath() string {
 	binFolder := filepath.Dir(exePath)
 	switch runtime.GOOS {
 	case "windows":
-		fullPath = "HiddifyCli.exe"
+		fullPath = "SdmCli.exe"
 	case "darwin":
 		fallthrough
 	default:
-		fullPath = "HiddifyCli"
+		fullPath = "SdmCli"
 	}
 
 	abspath, _ := filepath.Abs(filepath.Join(binFolder, fullPath))

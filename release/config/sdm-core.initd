@@ -1,0 +1,18 @@
+#!/sbin/openrc-run
+
+name=$RC_SVCNAME
+description="sdm-core service"
+supervisor="supervise-daemon"
+command="/usr/bin/sdm-core"
+command_args="-D /var/lib/sdm-core -C /etc/sdm-core run"
+extra_started_commands="reload"
+
+depend() {
+	after net dns
+}
+
+reload() {
+	ebegin "Reloading $RC_SVCNAME"
+        $supervisor "$RC_SVCNAME" --signal HUP
+	eend $?
+}

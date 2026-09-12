@@ -46,7 +46,7 @@ func (s *server) GenerateFullConfig(ctx context.Context, in *GenerateConfigReque
 		err = nil
 	})
 	ctx = libbox.BaseContext(nil)
-	config, err := BuildConfigJson(ctx, DefaultHiddifyOptions(), &ReadOptions{Path: in.Path})
+	config, err := BuildConfigJson(ctx, DefaultSdmOptions(), &ReadOptions{Path: in.Path})
 	if err != nil {
 		return nil, err
 	}

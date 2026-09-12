@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hiddify/hiddify-core/v2/config"
-	hcommon "github.com/hiddify/hiddify-core/v2/hcommon"
+	"github.com/HZ-PRE/kuailei-core/v2/config"
+	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/monitoring"
 	G "github.com/sagernet/sing-box/protocol/group"
@@ -17,7 +17,7 @@ import (
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func (h *HiddifyInstance) GetProxyInfo(url_test_history *adapter.URLTestHistory, detour adapter.Outbound) *OutboundInfo {
+func (h *SdmInstance) GetProxyInfo(url_test_history *adapter.URLTestHistory, detour adapter.Outbound) *OutboundInfo {
 	// historyStorage := h.UrlTestHistory()
 	// if historyStorage == nil {
 	// 	return nil
@@ -82,7 +82,7 @@ func (h *HiddifyInstance) GetProxyInfo(url_test_history *adapter.URLTestHistory,
 	return out
 }
 
-func (h *HiddifyInstance) GetAllProxiesInfo(hismap map[string]*adapter.URLTestHistory, onlyGroupitems bool) *OutboundGroupList {
+func (h *SdmInstance) GetAllProxiesInfo(hismap map[string]*adapter.URLTestHistory, onlyGroupitems bool) *OutboundGroupList {
 	ctx, box := h.Context(), h.Box()
 	if ctx == nil || box == nil {
 		return nil
@@ -186,7 +186,7 @@ func (s *CoreService) MainOutboundsInfo(req *hcommon.Empty, stream grpc.ServerSt
 	return static.AllProxiesInfoStream(stream, true)
 }
 
-func (h *HiddifyInstance) AllProxiesInfoStream(stream grpc.ServerStreamingServer[OutboundGroupList], onlyMain bool) error {
+func (h *SdmInstance) AllProxiesInfoStream(stream grpc.ServerStreamingServer[OutboundGroupList], onlyMain bool) error {
 	// stream.Send(&OutboundGroupList{})
 	h.MakeSureContextIsNew(stream.Context())
 
@@ -245,5 +245,5 @@ func (h *HiddifyInstance) AllProxiesInfoStream(stream grpc.ServerStreamingServer
 		}
 	}
 
-	return E.New("hiddify service not found")
+	return E.New("sdm service not found")
 }

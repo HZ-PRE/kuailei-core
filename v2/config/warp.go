@@ -9,10 +9,10 @@ import (
 
 	"github.com/bepass-org/warp-plus/warp"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/wireguard-go/hiddify"
+	"github.com/sagernet/wireguard-go/sdm"
 
 	// "github.com/bepass-org/wireguard-go/warp"
-	"github.com/hiddify/hiddify-core/v2/db"
+	"github.com/HZ-PRE/kuailei-core/v2/db"
 
 	"github.com/sagernet/sing-box/option"
 	T "github.com/sagernet/sing-box/option"
@@ -80,7 +80,7 @@ func getRandomWarpIP() string {
 	return "engage.cloudflareclient.com"
 }
 
-func generateWarp(license string, host string, port uint16, noise *hiddify.NoiseOptions) (*T.Endpoint, error) {
+func generateWarp(license string, host string, port uint16, noise *sdm.NoiseOptions) (*T.Endpoint, error) {
 	_, _, wgConfig, err := GenerateWarpInfo(license, "", "")
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func generateWarp(license string, host string, port uint16, noise *hiddify.Noise
 	return GenerateWarpSingbox(*wgConfig, host, port, noise)
 }
 
-func GenerateWarpSingbox(wgConfig WarpWireguardConfig, host string, port uint16, noise *hiddify.NoiseOptions) (*T.Endpoint, error) {
+func GenerateWarpSingbox(wgConfig WarpWireguardConfig, host string, port uint16, noise *sdm.NoiseOptions) (*T.Endpoint, error) {
 	if host == "" {
 		host = "auto4"
 	}
@@ -177,7 +177,7 @@ func getOrGenerateWarpLocallyIfNeeded(warpOptions *WarpOptions) WarpWireguardCon
 	return *wireguardConfig
 }
 
-func GenerateWarpSingboxNew(uniqueIdentifier string, noise *hiddify.NoiseOptions) (*T.Endpoint, error) {
+func GenerateWarpSingboxNew(uniqueIdentifier string, noise *sdm.NoiseOptions) (*T.Endpoint, error) {
 	// if host=="auto4" || host=="auto6" || host=="auto"{
 	// }
 	// host=""
@@ -202,7 +202,7 @@ func GenerateWarpSingboxNew(uniqueIdentifier string, noise *hiddify.NoiseOptions
 	return &out, nil
 }
 
-func patchWarp(base *option.Endpoint, configOpt *HiddifyOptions, final bool, staticIpsDns map[string][]string) error {
+func patchWarp(base *option.Endpoint, configOpt *SdmOptions, final bool, staticIpsDns map[string][]string) error {
 	if base.Type == C.TypeWARP {
 		if opts, ok := base.Options.(*option.WARPEndpointOptions); ok {
 			opts.ServerOptions.Server = ""
@@ -290,7 +290,7 @@ func patchWarp(base *option.Endpoint, configOpt *HiddifyOptions, final bool, sta
 				if opts.MTU < 100 {
 					opts.MTU = 1280
 				}
-				opts.Noise = hiddify.NoiseOptions{}
+				opts.Noise = sdm.NoiseOptions{}
 
 			}
 			// if base.WireGuardOptions.Detour == "" {

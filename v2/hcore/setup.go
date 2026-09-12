@@ -3,8 +3,8 @@ package hcore
 import (
 	"context"
 
-	"github.com/hiddify/hiddify-core/v2/hcommon"
-	"github.com/hiddify/hiddify-core/v2/service_manager"
+	"github.com/HZ-PRE/kuailei-core/v2/hcommon"
+	"github.com/HZ-PRE/kuailei-core/v2/service_manager"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 	statusPropagationPort int64
 )
 
-func InitHiddifyService() error {
+func InitSdmService() error {
 	return service_manager.StartServices()
 }
 

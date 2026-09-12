@@ -1,6 +1,6 @@
 package repository
 
 // import (
-// _ "github.com/hiddify/hiddify-app-demo-extension/hiddify_extension"
-// // _ "github.com/hiddify/hiddify-ip-scanner-extension/hiddify_extension"
+// _ "github.com/sdm/sdm-app-demo-extension/sdm_extension"
+// // _ "github.com/sdm/sdm-ip-scanner-extension/sdm_extension"
 // )

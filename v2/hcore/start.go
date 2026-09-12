@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/hiddify/hiddify-core/v2/config"
-	"github.com/hiddify/hiddify-core/v2/db"
-	hcommon "github.com/hiddify/hiddify-core/v2/hcommon"
-	service_manager "github.com/hiddify/hiddify-core/v2/service_manager"
+	"github.com/HZ-PRE/kuailei-core/v2/config"
+	"github.com/HZ-PRE/kuailei-core/v2/db"
+	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
+	service_manager "github.com/HZ-PRE/kuailei-core/v2/service_manager"
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox"
@@ -100,10 +100,10 @@ func StartService(ctx context.Context, in *StartRequest) (coreResponse *CoreInfo
 
 	static.previousStartRequest = in
 
-	if static.HiddifyOptions == nil {
+	if static.SdmOptions == nil {
 		return errorWrapper(
 			MessageType_ERROR_BUILDING_CONFIG,
-			errors.New("HiddifyOptions not initialized"),
+			errors.New("SdmOptions not initialized"),
 		)
 	}
 

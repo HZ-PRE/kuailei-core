@@ -10,8 +10,8 @@ import (
 	"github.com/sagernet/sing-box/daemon"
 	"github.com/sagernet/sing-box/option"
 
-	hcommon "github.com/hiddify/hiddify-core/v2/hcommon"
-	"github.com/hiddify/hiddify-core/v2/hcore"
+	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
+	"github.com/HZ-PRE/kuailei-core/v2/hcore"
 )
 
 type TunnelService struct {
@@ -54,7 +54,7 @@ func makeTunnelConfig(in *TunnelStartRequest) option.Options {
 					StrictRoute:            in.StrictRoute,
 					AutoRoute:              true,
 					Address:                ips,
-					InterfaceName:          "HiddifyTunnel",
+					InterfaceName:          "SdmTunnel",
 					Stack:                  in.Stack,
 				},
 			},
@@ -85,10 +85,10 @@ func makeTunnelConfig(in *TunnelStartRequest) option.Options {
 					DefaultOptions: option.DefaultRule{
 						RawDefaultRule: option.RawDefaultRule{
 							ProcessName: []string{
-								"Hiddify.exe",
-								"Hiddify",
-								"HiddifyCli",
-								"HiddifyCli.exe",
+								"Sdm.exe",
+								"Sdm",
+								"SdmCli",
+								"SdmCli.exe",
 							},
 						},
 						RuleAction: option.RuleAction{

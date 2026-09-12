@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	_ "github.com/hiddify/hiddify-core/extension/repository"
-	"github.com/hiddify/hiddify-core/extension/server"
+	_ "github.com/HZ-PRE/kuailei-core/extension/repository"
+	"github.com/HZ-PRE/kuailei-core/extension/server"
 	"github.com/spf13/cobra"
 )
 

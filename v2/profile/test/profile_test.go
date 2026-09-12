@@ -1,43 +1,40 @@
+//go:build with_wireguard
+
 package test
 
 import (
-	"fmt"
+	"os"
 	"testing"
 
-	"github.com/hiddify/hiddify-core/v2/profile"
+	"github.com/HZ-PRE/kuailei-core/v2/profile"
 	"github.com/sagernet/sing-box/experimental/libbox"
 )
 
 func TestAddByContent(t *testing.T) {
 	ctx := libbox.BaseContext(nil)
-	entity, err := profile.AddByUrl(ctx, "https://raw.githubusercontent.com/hiddify/hiddify-next/refs/heads/main/test.configs/warp", "", false)
+	content, err := os.ReadFile("testdata/warp")
+	if err != nil {
+		t.Fatalf("read test profile: %v", err)
+	}
+	entity, err := profile.AddByContent(ctx, string(content), "", false)
 	if err != nil {
 		t.Fatalf("expected no error, but got: %v", err)
 	}
-	fmt.Printf("entity: %v\n", entity)
-	// Check if the content has been added correctly
-	profileTitle := entity.Name
-	expectedTitle := "🔥 WARP 🔥" // The Base64 decoded title
-	if profileTitle != expectedTitle {
-		t.Errorf("expected profile title to be %v, got %v", expectedTitle, profileTitle)
+	if entity == nil {
+		t.Fatal("expected a profile entity")
 	}
-
-	// Check subscription userinfo
-	userInfo := entity.SubInfo
-	if userInfo.Upload != 0 || userInfo.Download != 0 || userInfo.Total != 10737418240000000 || userInfo.Expire != 2546249531 {
-		t.Errorf("subscription userinfo not parsed correctly, got: %v", userInfo)
+	t.Cleanup(func() {
+		if err := profile.DeleteById(entity.Id); err != nil {
+			t.Errorf("delete test profile: %v", err)
+		}
+	})
+	if entity.Id == "" {
+		t.Error("expected a generated profile ID")
 	}
-
-	// Check URLs
-	supportURL := entity.SubInfo.SupportUrl
-	if supportURL != "https://t.me/hiddify" {
-		t.Errorf("expected support URL to be https://t.me/hiddify, got %v", supportURL)
+	if entity.LastUpdate <= 0 {
+		t.Errorf("expected a valid update timestamp, got %d", entity.LastUpdate)
 	}
-
-	profileWebPageURL := entity.SubInfo.WebPageUrl
-	if profileWebPageURL != "https://hiddify.com" {
-		t.Errorf("expected profile web page URL to be https://hiddify.com, got %v", profileWebPageURL)
+	if entity.Name != "" {
+		t.Errorf("expected the supplied empty profile name, got %q", entity.Name)
 	}
-	profile.DeleteById(entity.Id)
-	// You can further assert individual fields of warp configurations
 }

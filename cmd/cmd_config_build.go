@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hiddify/hiddify-core/v2/config"
-	hcore "github.com/hiddify/hiddify-core/v2/hcore"
+	"github.com/HZ-PRE/kuailei-core/v2/config"
+	hcore "github.com/HZ-PRE/kuailei-core/v2/hcore"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	hiddifySettingPath     string
+	sdmSettingPath     string
 	configPath             string
-	defaultConfigs         config.HiddifyOptions = *config.DefaultHiddifyOptions()
+	defaultConfigs         config.SdmOptions = *config.DefaultSdmOptions()
 	commandBuildOutputPath string
 )
 
@@ -27,7 +27,7 @@ var commandBuild = &cobra.Command{
 	Use:   "build",
 	Short: "Build configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := build(configPath, hiddifySettingPath)
+		err := build(configPath, sdmSettingPath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -62,15 +62,15 @@ func build(path string, optionsPath string) error {
 	ctx := libbox.BaseContext(nil)
 	var err error
 
-	hiddifyOptions := &defaultConfigs // config.DefaultHiddifyOptions()
+	sdmOptions := &defaultConfigs // config.DefaultSdmOptions()
 	if optionsPath != "" {
-		hiddifyOptions, err = readHiddifyOptionsAt(optionsPath)
+		sdmOptions, err = readSdmOptionsAt(optionsPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	config, err := config.BuildConfigJson(ctx, hiddifyOptions, &config.ReadOptions{Path: path})
+	config, err := config.BuildConfigJson(ctx, sdmOptions, &config.ReadOptions{Path: path})
 	if err != nil {
 		return err
 	}
@@ -110,12 +110,12 @@ func readConfigAt(ctx context.Context, path string) (*option.Options, error) {
 	return &options, nil
 }
 
-func readHiddifyOptionsAt(path string) (*config.HiddifyOptions, error) {
+func readSdmOptionsAt(path string) (*config.SdmOptions, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var options config.HiddifyOptions
+	var options config.SdmOptions
 	err = json.Unmarshal(content, &options)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func readHiddifyOptionsAt(path string) (*config.HiddifyOptions, error) {
 func addHConfigFlags(commandRun *cobra.Command) {
 	commandRun.Flags().StringVarP(&configPath, "config", "c", "", "proxy config path or url")
 	commandRun.MarkFlagRequired("config")
-	commandRun.Flags().StringVarP(&hiddifySettingPath, "hiddify", "d", "", "Hiddify Setting JSON Path")
+	commandRun.Flags().StringVarP(&sdmSettingPath, "sdm", "d", "", "Sdm Setting JSON Path")
 	commandRun.Flags().BoolVar(&defaultConfigs.EnableFullConfig, "full-config", false, "allows including tags other than output")
 	commandRun.Flags().StringVar(&defaultConfigs.LogLevel, "log", "warn", "log level")
 	commandRun.Flags().BoolVar(&defaultConfigs.InboundOptions.EnableTun, "tun", false, "Enable Tun")

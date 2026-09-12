@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hiddify/hiddify-core/v2/hcore/tunnelservice"
+	"github.com/HZ-PRE/kuailei-core/v2/hcore/tunnelservice"
 
 	"github.com/spf13/cobra"
 )

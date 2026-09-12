@@ -13,13 +13,13 @@ import (
 
 var logger service.Logger
 
-type hiddifyNext struct {
+type sdmNext struct {
 	tunnelService *TunnelService
 }
 
 var port int = 18020
 
-func (m *hiddifyNext) StartTunnelGrpcServer(listenAddressG string) (*grpc.Server, error) {
+func (m *sdmNext) StartTunnelGrpcServer(listenAddressG string) (*grpc.Server, error) {
 	lis, err := net.Listen("tcp", listenAddressG)
 	if err != nil {
 		log.Printf("failed to listen: %v", err)
@@ -40,12 +40,12 @@ func (m *hiddifyNext) StartTunnelGrpcServer(listenAddressG string) (*grpc.Server
 	return s, nil
 }
 
-func (m *hiddifyNext) Start(s service.Service) error {
+func (m *sdmNext) Start(s service.Service) error {
 	_, err := m.StartTunnelGrpcServer(fmt.Sprintf("127.0.0.1:%d", port))
 	return err
 }
 
-func (m *hiddifyNext) Stop(s service.Service) error {
+func (m *sdmNext) Stop(s service.Service) error {
 	_, err := m.tunnelService.Stop(nil, nil)
 	if err != nil {
 		return nil
@@ -69,8 +69,8 @@ func getCurrentExecutableDirectory() string {
 
 func StartTunnelService(goArg string) (int, string) {
 	svcConfig := &service.Config{
-		Name:        "HiddifyTunnelService",
-		DisplayName: "Hiddify Tunnel Service",
+		Name:        "SdmTunnelService",
+		DisplayName: "Sdm Tunnel Service",
 		Arguments:   []string{"tunnel", "run"},
 		Description: "This is a bridge for tunnel",
 		Option: map[string]interface{}{
@@ -79,7 +79,7 @@ func StartTunnelService(goArg string) (int, string) {
 		},
 	}
 
-	prg := &hiddifyNext{}
+	prg := &sdmNext{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
 		// log.Printf("Error: %v", err)

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hiddify/ray2sing/ray2sing"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/batch"
 	SJ "github.com/sagernet/sing/common/json"
+	"github.com/sdm/ray2sing/ray2sing"
 	"github.com/xmdhs/clash2singbox/convert"
 	clash2singmodel "github.com/xmdhs/clash2singbox/model"
 	"github.com/xmdhs/clash2singbox/model/clash"
@@ -33,7 +33,7 @@ func ReadContent(ctx context.Context, opt *ReadOptions) ([]byte, error) {
 	return []byte(opt.Content), nil
 }
 
-func ParseConfig(ctx context.Context, opt *ReadOptions, debug bool, configOpt *HiddifyOptions, fullConfig bool) (*option.Options, error) {
+func ParseConfig(ctx context.Context, opt *ReadOptions, debug bool, configOpt *SdmOptions, fullConfig bool) (*option.Options, error) {
 	content, err := ReadContent(ctx, opt)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func ParseConfig(ctx context.Context, opt *ReadOptions, debug bool, configOpt *H
 	return parseConfigContent(ctx, content, debug, nil, false)
 }
 
-func ParseConfigBytes(ctx context.Context, opt *ReadOptions, debug bool, configOpt *HiddifyOptions, fullConfig bool) ([]byte, error) {
+func ParseConfigBytes(ctx context.Context, opt *ReadOptions, debug bool, configOpt *SdmOptions, fullConfig bool) ([]byte, error) {
 
 	options, err := ParseConfig(ctx, opt, debug, configOpt, fullConfig)
 	if err != nil {
@@ -51,9 +51,9 @@ func ParseConfigBytes(ctx context.Context, opt *ReadOptions, debug bool, configO
 	return options.MarshalJSONContext(ctx)
 
 }
-func parseConfigContent(ctx context.Context, content []byte, debug bool, configOpt *HiddifyOptions, fullConfig bool) (*option.Options, error) {
+func parseConfigContent(ctx context.Context, content []byte, debug bool, configOpt *SdmOptions, fullConfig bool) (*option.Options, error) {
 	if configOpt == nil {
-		configOpt = DefaultHiddifyOptions()
+		configOpt = DefaultSdmOptions()
 	}
 
 	var jsonObj map[string]interface{} = make(map[string]interface{})
@@ -69,12 +69,7 @@ func parseConfigContent(ctx context.Context, content []byte, debug bool, configO
 				if fullConfig || (configOpt != nil && configOpt.EnableFullConfig) {
 					jsonObj = tmpJsonObj
 				} else {
-					if tmpJsonObj["outbounds"] != nil {
-						jsonObj["outbounds"] = tmpJsonObj["outbounds"]
-					}
-					if tmpJsonObj["endpoints"] != nil {
-						jsonObj["endpoints"] = tmpJsonObj["endpoints"]
-					}
+					jsonObj = selectBuildInputSections(tmpJsonObj)
 				}
 			}
 		} else if jsonArray, ok := tmpJsonResult.([]map[string]interface{}); ok {
@@ -114,7 +109,29 @@ func parseConfigContent(ctx context.Context, content []byte, debug bool, configO
 	return nil, fmt.Errorf("unable to determine config format")
 }
 
-func patchConfigStr(ctx context.Context, content []byte, name string, configOpt *HiddifyOptions) (*option.Options, error) {
+func selectBuildInputSections(input map[string]interface{}) map[string]interface{} {
+	selected := make(map[string]interface{})
+	for _, key := range []string{"outbounds", "endpoints"} {
+		if value, exists := input[key]; exists {
+			selected[key] = value
+		}
+	}
+
+	if route, ok := input["route"].(map[string]interface{}); ok {
+		selectedRoute := make(map[string]interface{})
+		for _, key := range []string{"rules", "rule_set"} {
+			if value, exists := route[key]; exists {
+				selectedRoute[key] = value
+			}
+		}
+		if len(selectedRoute) > 0 {
+			selected["route"] = selectedRoute
+		}
+	}
+	return selected
+}
+
+func patchConfigStr(ctx context.Context, content []byte, name string, configOpt *SdmOptions) (*option.Options, error) {
 	options := option.Options{}
 	err := options.UnmarshalJSONContext(ctx, content)
 
@@ -124,7 +141,7 @@ func patchConfigStr(ctx context.Context, content []byte, name string, configOpt 
 
 	return patchConfigOptions(ctx, &options, name, configOpt)
 }
-func patchConfigOptions(ctx context.Context, options *option.Options, name string, configOpt *HiddifyOptions) (*option.Options, error) {
+func patchConfigOptions(ctx context.Context, options *option.Options, name string, configOpt *SdmOptions) (*option.Options, error) {
 	b, _ := batch.New(ctx, batch.WithConcurrencyNum[*option.Endpoint](2))
 	for _, base := range options.Endpoints {
 		out := base

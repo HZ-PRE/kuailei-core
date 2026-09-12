@@ -3,7 +3,7 @@ package hcore
 import (
 	"fmt"
 
-	hcommon "github.com/hiddify/hiddify-core/v2/hcommon"
+	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"google.golang.org/grpc"
 )
 
