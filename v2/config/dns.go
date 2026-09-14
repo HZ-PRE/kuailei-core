@@ -47,11 +47,15 @@ func setDns(options *option.Options, opt *SdmOptions, staticIps *map[string][]st
 	// 	remoteAddr = strings.Replace(remoteAddr, "udp://", "tcp://", 1)
 	// }
 
-	remote_dns, err := getDNSServerOptions(DNSRemoteTag, remoteAddr, DNSDirectTag, OutboundMainDetour)
+	remoteDetour := OutboundMainDetour
+	if opt.RoutingMode == "global" {
+		remoteDetour = OutboundSelectTag
+	}
+	remote_dns, err := getDNSServerOptions(DNSRemoteTag, remoteAddr, DNSDirectTag, remoteDetour)
 	if err != nil {
 		return err
 	}
-	remote_dns_fallback, err := getDNSServerOptions(DNSRemoteTagFallback, fallbackAddr, DNSDirectTag, OutboundMainDetour)
+	remote_dns_fallback, err := getDNSServerOptions(DNSRemoteTagFallback, fallbackAddr, DNSDirectTag, remoteDetour)
 	if err != nil {
 		return err
 	}

@@ -48,8 +48,6 @@ github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
-github.com/akavel/rsrc v0.10.2 h1:Zxm8V5eI1hW4gGaYsJQUhxpjkENuG91ki8B4zCrvEsw=
-github.com/akavel/rsrc v0.10.2/go.mod h1:uLoCtb9J+EyAqh+26kdrTgmzRBFPGOolLWKpdxkKq+c=
 github.com/akutz/memconn v0.1.0 h1:NawI0TORU4hcOMsMr11g7vwlCdkYeLKXBcxWu2W/P8A=
 github.com/akutz/memconn v0.1.0/go.mod h1:Jo8rI7m0NieZyLI5e2CDlRdRqRRB4S7Xp77ukDjH+Fw=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -772,14 +770,6 @@ github.com/sagernet/smux v1.5.50-sing-box-mod.1/go.mod h1:NjhsCEWedJm7eFLyhuBgIE
 github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854 h1:6uUiZcDRnZSAegryaUGwPC/Fj13JSHwiTftrXhMmYOc=
 github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854/go.mod h1:LtfoSK3+NG57tvnVEHgcuBW9ujgE8enPSgzgwStwCAA=
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
-github.com/sdm/GooseRelayVPN v0.0.0-20260429125124-0e68c2a3ae4c h1:9Zc0hJ14G+SNJvGxtaSCSsvGB/RdLltrgjgR//9zgTQ=
-github.com/sdm/GooseRelayVPN v0.0.0-20260429125124-0e68c2a3ae4c/go.mod h1:LI/1qA7FDU3MumegfyFOHGZCXcOw6rjIk7NPXga3/pQ=
-github.com/sdm/hmrd_multi_resolver_dns v0.0.0-20260429114007-8d809dc33d0e h1:GsHpSccRtSFe1l3hq0WtBjqsKjJdU+an2D+uCsXm+xk=
-github.com/sdm/hmrd_multi_resolver_dns v0.0.0-20260429114007-8d809dc33d0e/go.mod h1:7u9Ece+I3gvMFzcpqhROWaykNUyoE21g/fYQMBasAWY=
-github.com/sdm/vaydns v0.0.0-20260401180616-890dc987a6a9 h1:KXnaABX8hHmkcL0jbL769hEIGI5+z/DajCrlO+Bkzcc=
-github.com/sdm/vaydns v0.0.0-20260401180616-890dc987a6a9/go.mod h1:+8kEfQsZJn7/4aIppVekrSuqhrKjGBIgnacTJkdAlS8=
-github.com/sdm/warp-plus v0.0.0-20240717223357-4f3122e0d11d h1:vRGKh9ou+/vQGfVYa8MczhbIVjHxlP52OWwrDWO77RA=
-github.com/sdm/warp-plus v0.0.0-20240717223357-4f3122e0d11d/go.mod h1:uSRUbr1CcvFrEV69FTvuJFwpzEmwO8N4knb6+Zq3Ys4=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/sergeyfrolov/bsbuffer v0.0.0-20180903213811-94e85abb8507 h1:ML7ZNtcln5UBo5Wv7RIv9Xg3Pr5VuRCWLFXEwda54Y4=
 github.com/sergeyfrolov/bsbuffer v0.0.0-20180903213811-94e85abb8507/go.mod h1:DbI1gxrXI2jRGw7XGEUZQOOMd6PsnKzRrCKabvvMrwM=

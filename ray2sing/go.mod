@@ -231,16 +231,14 @@ require (
 	tailscale.com v1.58.2 // indirect
 )
 
-//replace github.com/sagernet/sing-box => github.com/sdm/sdm-sing-box v1.13.0-rc.2.0.20260215114412-cabace8fd3ce
 replace github.com/sagernet/sing-box => ../sdm-sing-box
 
-// replace github.com/xtls/xray-core => github.com/sdm/xray-core v0.0.0-20260124181826-59e6569c13e9
-replace github.com/sagernet/wireguard-go => github.com/sdm/wireguard-go v0.0.0-20260202221310-b94beca5cb72
+replace github.com/sagernet/wireguard-go => ../sdm-sing-box/replace/wireguard-go
 
 replace github.com/sagernet/sing-dns => github.com/shtorm-7/sing-dns v0.4.6-extended-1.0.0
 
 replace github.com/ameshkov/dnscrypt/v2 => github.com/shtorm-7/dnscrypt/v2 v2.4.0-extended-1.0.0
 
-replace github.com/Psiphon-Labs/quic-go => github.com/sdm/psiphon-quic-go v0.0.0-20260205155832-2164d1653824
+replace github.com/Psiphon-Labs/quic-go => ../sdm-sing-box/replace/psiphon-quic-go
 
-replace github.com/Psiphon-Labs/psiphon-tls => github.com/sdm/psiphon-tls v0.0.0-20260205181946-4af85c2fb9f2
+replace github.com/Psiphon-Labs/psiphon-tls => ../sdm-sing-box/replace/psiphon-tls

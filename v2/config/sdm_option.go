@@ -67,6 +67,7 @@ type URLTestOptions struct {
 }
 
 type RouteOptions struct {
+	RoutingMode            string                `json:"routing-mode,omitempty"`
 	ResolveDestination     bool                  `json:"resolve-destination,omitempty"`
 	IPv6Mode               option.DomainStrategy `json:"ipv6-mode,omitempty"`
 	BypassLAN              bool                  `json:"bypass-lan,omitempty"`

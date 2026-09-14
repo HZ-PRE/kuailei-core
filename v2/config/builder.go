@@ -630,47 +630,132 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 		},
 	})
 
-	routeRules = append(routeRules, option.Rule{
-		Type: C.RuleTypeDefault,
+	// Global mode keeps DNS handling above, but never loads business routing
+	// rules or their rule sets (including imported, LAN and blocking rules).
+	if hopt.RoutingMode != "global" {
+		routeRules = append(routeRules, option.Rule{
+			Type: C.RuleTypeDefault,
 
-		DefaultOptions: option.DefaultRule{
-			RawDefaultRule: option.RawDefaultRule{
-				IPCIDR: []string{
-					"10.10.34.0/24",
-					"2001:4188:2:600:10:10:34:0/120",
+			DefaultOptions: option.DefaultRule{
+				RawDefaultRule: option.RawDefaultRule{
+					IPCIDR: []string{
+						"10.10.34.0/24",
+						"2001:4188:2:600:10:10:34:0/120",
+					},
+				},
+				RuleAction: option.RuleAction{
+					Action: C.RuleActionTypeRoute,
+					RouteOptions: option.RouteActionOptions{
+						Outbound: OutboundMainDetour,
+					},
 				},
 			},
-			RuleAction: option.RuleAction{
-				Action: C.RuleActionTypeRoute,
-				RouteOptions: option.RouteActionOptions{
-					Outbound: OutboundMainDetour,
-				},
-			},
-		},
-	})
-	// {
-	// 	Type: C.RuleTypeDefault,
-	// 	DefaultOptions: option.DefaultRule{
-	// 		ClashMode: "Direct",
-	// 		Outbound:  OutboundDirectTag,
-	// 	},
-	// },
-	// {
-	// 	Type: C.RuleTypeDefault,
-	// 	DefaultOptions: option.DefaultRule{
-	// 		ClashMode: "Global",
-	// 		Outbound:  OutboundMainProxyTag,
-	// 	},
-	// },	}
+		})
+		// {
+		// 	Type: C.RuleTypeDefault,
+		// 	DefaultOptions: option.DefaultRule{
+		// 		ClashMode: "Direct",
+		// 		Outbound:  OutboundDirectTag,
+		// 	},
+		// },
+		// {
+		// 	Type: C.RuleTypeDefault,
+		// 	DefaultOptions: option.DefaultRule{
+		// 		ClashMode: "Global",
+		// 		Outbound:  OutboundMainProxyTag,
+		// 	},
+		// },	}
 
-	if hopt.BypassLAN {
-		routeRules = append(
-			routeRules,
-			option.Rule{
+		if hopt.BypassLAN {
+			routeRules = append(
+				routeRules,
+				option.Rule{
+					Type: C.RuleTypeDefault,
+					DefaultOptions: option.DefaultRule{
+						RawDefaultRule: option.RawDefaultRule{
+							IPIsPrivate: true,
+						},
+						RuleAction: option.RuleAction{
+							Action: C.RuleActionTypeRoute,
+							RouteOptions: option.RouteActionOptions{
+								Outbound: OutboundDirectTag,
+							},
+						},
+					},
+				},
+			)
+		}
+
+		appRuleSetTags := make(map[string]string)
+		for _, rule := range hopt.Rules {
+			if !rule.Enabled {
+				continue
+			}
+			convertedRule, newRuleSets, err := convertAppRouteRule(rule, appRuleSetTags)
+			if err != nil {
+				return err
+			}
+			routeRules = append(routeRules, convertedRule)
+			rulesets = append(rulesets, newRuleSets...)
+
+			// dnsRule := rule.MakeDNSRule()
+			// switch rule.Outbound {
+			// case "bypass":
+			// 	dnsRule.Server = DNSDirectTag
+			// case "block":
+			// 	dnsRule.Server = DNSBlockTag
+			// 	dnsRule.DisableCache = true
+			// case "proxy":
+			// 	if opt.EnableFakeDNS {
+			// 		fakeDnsRule := dnsRule
+			// 		fakeDnsRule.Server = DNSFakeTag
+			// 		fakeDnsRule.Inbound = []string{InboundTUNTag, InboundMixedTag}
+			// 		dnsRules = append(dnsRules, fakeDnsRule)
+			// 	}
+			// 	dnsRule.Server = DNSRemoteTag
+			// }
+			// dnsRules = append(dnsRules, dnsRule)
+		}
+		if inputRoute != nil {
+			routeRules = append(routeRules, inputRoute.Rules...)
+		}
+		forceDirectRoute := make([]string, 0)
+		if options.NTP != nil && options.NTP.Enabled {
+			forceDirectRoute = append(forceDirectRoute, options.NTP.Server)
+		}
+
+		// parsedURL, err := url.Parse(opt.ConnectionTestUrl)
+		// if err == nil {
+		// 	dnsRules = append(dnsRules, option.DefaultDNSRule{
+		// 		Domain:       []string{parsedURL.Host},
+		// 		Server:       DNSRemoteTag,
+		// 		RewriteTTL:   &dnsCPttl,
+		// 		DisableCache: false,
+		// 	})
+		// }
+
+		if len(forceDirectRoute) > 0 {
+
+			dnsRules = append(dnsRules, option.DefaultDNSRule{
+				RawDefaultDNSRule: option.RawDefaultDNSRule{
+					Domain: forceDirectRoute,
+				},
+				DNSRuleAction: option.DNSRuleAction{
+					Action: C.RuleActionTypeRoute,
+					RouteOptions: option.DNSRouteActionOptions{
+						Server:         DNSMultiDirectTag,
+						Strategy:       hopt.DirectDnsDomainStrategy,
+						RewriteTTL:     &DEFAULT_DNS_TTL,
+						DisableCache:   false,
+						BypassIfFailed: false,
+					},
+				},
+			})
+			routeRules = append(routeRules, option.Rule{
 				Type: C.RuleTypeDefault,
 				DefaultOptions: option.DefaultRule{
 					RawDefaultRule: option.RawDefaultRule{
-						IPIsPrivate: true,
+						Domain: forceDirectRoute,
 					},
 					RuleAction: option.RuleAction{
 						Action: C.RuleActionTypeRoute,
@@ -679,302 +764,225 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 						},
 					},
 				},
-			},
-		)
-	}
-
-	appRuleSetTags := make(map[string]string)
-	for _, rule := range hopt.Rules {
-		if !rule.Enabled {
-			continue
+			})
 		}
-		convertedRule, newRuleSets, err := convertAppRouteRule(rule, appRuleSetTags)
-		if err != nil {
-			return err
+		rejectRCode := (option.DNSRCode(sdns.RcodeRefused))
+		rejectDnsAction := option.DNSRuleAction{
+			Action: C.RuleActionTypePredefined,
+			PredefinedOptions: option.DNSRouteActionPredefined{
+				Rcode: &rejectRCode,
+			},
 		}
-		routeRules = append(routeRules, convertedRule)
-		rulesets = append(rulesets, newRuleSets...)
-
-		// dnsRule := rule.MakeDNSRule()
-		// switch rule.Outbound {
-		// case "bypass":
-		// 	dnsRule.Server = DNSDirectTag
-		// case "block":
-		// 	dnsRule.Server = DNSBlockTag
-		// 	dnsRule.DisableCache = true
-		// case "proxy":
-		// 	if opt.EnableFakeDNS {
-		// 		fakeDnsRule := dnsRule
-		// 		fakeDnsRule.Server = DNSFakeTag
-		// 		fakeDnsRule.Inbound = []string{InboundTUNTag, InboundMixedTag}
-		// 		dnsRules = append(dnsRules, fakeDnsRule)
-		// 	}
-		// 	dnsRule.Server = DNSRemoteTag
-		// }
-		// dnsRules = append(dnsRules, dnsRule)
-	}
-	if inputRoute != nil {
-		routeRules = append(routeRules, inputRoute.Rules...)
-	}
-	forceDirectRoute := make([]string, 0)
-	if options.NTP != nil && options.NTP.Enabled {
-		forceDirectRoute = append(forceDirectRoute, options.NTP.Server)
-	}
-
-	// parsedURL, err := url.Parse(opt.ConnectionTestUrl)
-	// if err == nil {
-	// 	dnsRules = append(dnsRules, option.DefaultDNSRule{
-	// 		Domain:       []string{parsedURL.Host},
-	// 		Server:       DNSRemoteTag,
-	// 		RewriteTTL:   &dnsCPttl,
-	// 		DisableCache: false,
-	// 	})
-	// }
-
-	if len(forceDirectRoute) > 0 {
-
-		dnsRules = append(dnsRules, option.DefaultDNSRule{
-			RawDefaultDNSRule: option.RawDefaultDNSRule{
-				Domain: forceDirectRoute,
-			},
-			DNSRuleAction: option.DNSRuleAction{
-				Action: C.RuleActionTypeRoute,
-				RouteOptions: option.DNSRouteActionOptions{
-					Server:         DNSMultiDirectTag,
-					Strategy:       hopt.DirectDnsDomainStrategy,
-					RewriteTTL:     &DEFAULT_DNS_TTL,
-					DisableCache:   false,
-					BypassIfFailed: false,
+		if hopt.BlockAds {
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geosite-ads",
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-category-ads-all.srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
 				},
-			},
-		})
-		routeRules = append(routeRules, option.Rule{
-			Type: C.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
-					Domain: forceDirectRoute,
+			})
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geosite-malware",
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-malware.srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
 				},
-				RuleAction: option.RuleAction{
-					Action: C.RuleActionTypeRoute,
-					RouteOptions: option.RouteActionOptions{
-						Outbound: OutboundDirectTag,
+			})
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geosite-phishing",
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-phishing.srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
+				},
+			})
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geosite-cryptominers",
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-cryptominers.srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
+				},
+			})
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geoip-phishing",
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geoip-phishing.srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
+				},
+			})
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geoip-malware",
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geoip-malware.srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
+				},
+			})
+
+			routeRules = append(routeRules, option.Rule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultRule{
+					RawDefaultRule: option.RawDefaultRule{
+						RuleSet: []string{
+							"geosite-ads",
+							"geosite-malware",
+							"geosite-phishing",
+							"geosite-cryptominers",
+							"geoip-malware",
+							"geoip-phishing",
+						},
+					},
+					RuleAction: option.RuleAction{
+						Action: C.RuleActionTypeReject,
+						RejectOptions: option.RejectActionOptions{
+							Method: C.RuleActionRejectMethodDefault,
+						},
 					},
 				},
-			},
-		})
-	}
-	rejectRCode := (option.DNSRCode(sdns.RcodeRefused))
-	rejectDnsAction := option.DNSRuleAction{
-		Action: C.RuleActionTypePredefined,
-		PredefinedOptions: option.DNSRouteActionPredefined{
-			Rcode: &rejectRCode,
-		},
-	}
-	if hopt.BlockAds {
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geosite-ads",
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-category-ads-all.srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geosite-malware",
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-malware.srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geosite-phishing",
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-phishing.srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geosite-cryptominers",
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geosite-cryptominers.srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geoip-phishing",
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geoip-phishing.srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geoip-malware",
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/block/geoip-malware.srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
+			})
+			dnsRules = append(dnsRules, option.DefaultDNSRule{
+				RawDefaultDNSRule: option.RawDefaultDNSRule{
 
-		routeRules = append(routeRules, option.Rule{
-			Type: C.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
 					RuleSet: []string{
 						"geosite-ads",
 						"geosite-malware",
 						"geosite-phishing",
 						"geosite-cryptominers",
-						"geoip-malware",
-						"geoip-phishing",
 					},
 				},
-				RuleAction: option.RuleAction{
-					Action: C.RuleActionTypeReject,
-					RejectOptions: option.RejectActionOptions{
-						Method: C.RuleActionRejectMethodDefault,
-					},
-				},
-			},
-		})
-		dnsRules = append(dnsRules, option.DefaultDNSRule{
-			RawDefaultDNSRule: option.RawDefaultDNSRule{
-
-				RuleSet: []string{
-					"geosite-ads",
-					"geosite-malware",
-					"geosite-phishing",
-					"geosite-cryptominers",
-				},
-			},
-			DNSRuleAction: rejectDnsAction,
-		})
-	}
-	if hopt.Region != "other" {
-		dnsRules = append(dnsRules, option.DefaultDNSRule{
-			RawDefaultDNSRule: option.RawDefaultDNSRule{
-				DomainSuffix: []string{"." + hopt.Region},
-			},
-			DNSRuleAction: option.DNSRuleAction{
-				Action: C.RuleActionTypeRoute,
-				RouteOptions: option.DNSRouteActionOptions{
-					Server:         DNSMultiDirectTag,
-					Strategy:       hopt.DirectDnsDomainStrategy,
-					RewriteTTL:     &DEFAULT_DNS_TTL,
-					BypassIfFailed: false,
-				},
-			},
-		})
-		routeRules = append(routeRules, option.Rule{
-			Type: C.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
+				DNSRuleAction: rejectDnsAction,
+			})
+		}
+		if hopt.Region != "other" {
+			dnsRules = append(dnsRules, option.DefaultDNSRule{
+				RawDefaultDNSRule: option.RawDefaultDNSRule{
 					DomainSuffix: []string{"." + hopt.Region},
 				},
-				RuleAction: option.RuleAction{
+				DNSRuleAction: option.DNSRuleAction{
 					Action: C.RuleActionTypeRoute,
-					RouteOptions: option.RouteActionOptions{
-						Outbound: OutboundDirectTag,
+					RouteOptions: option.DNSRouteActionOptions{
+						Server:         DNSMultiDirectTag,
+						Strategy:       hopt.DirectDnsDomainStrategy,
+						RewriteTTL:     &DEFAULT_DNS_TTL,
+						BypassIfFailed: false,
 					},
 				},
-			},
-		})
-
-		dnsRules = append(dnsRules, option.DefaultDNSRule{
-			RawDefaultDNSRule: option.RawDefaultDNSRule{
-
-				RuleSet: []string{
-					"geosite-" + hopt.Region,
+			})
+			routeRules = append(routeRules, option.Rule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultRule{
+					RawDefaultRule: option.RawDefaultRule{
+						DomainSuffix: []string{"." + hopt.Region},
+					},
+					RuleAction: option.RuleAction{
+						Action: C.RuleActionTypeRoute,
+						RouteOptions: option.RouteActionOptions{
+							Outbound: OutboundDirectTag,
+						},
+					},
 				},
-			},
-			DNSRuleAction: option.DNSRuleAction{
-				Action: C.RuleActionTypeRoute,
-				RouteOptions: option.DNSRouteActionOptions{
-					Server:         DNSMultiDirectTag,
-					Strategy:       hopt.DirectDnsDomainStrategy,
-					RewriteTTL:     &DEFAULT_DNS_TTL,
-					BypassIfFailed: false,
-				},
-			},
-		})
+			})
 
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geoip-" + hopt.Region,
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/country/geoip-" + hopt.Region + ".srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
-		rulesets = append(rulesets, option.RuleSet{
-			Type:   C.RuleSetTypeRemote,
-			Tag:    "geosite-" + hopt.Region,
-			Format: C.RuleSetFormatBinary,
-			RemoteOptions: option.RemoteRuleSet{
-				URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/country/geosite-" + hopt.Region + ".srs",
-				UpdateInterval: badoption.Duration(5 * time.Hour * 24),
-				DownloadDetour: OutboundSelectTag,
-			},
-		})
+			dnsRules = append(dnsRules, option.DefaultDNSRule{
+				RawDefaultDNSRule: option.RawDefaultDNSRule{
 
-		routeRules = append(routeRules, option.Rule{
-			Type: C.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
 					RuleSet: []string{
-						"geoip-" + hopt.Region,
 						"geosite-" + hopt.Region,
 					},
 				},
-				RuleAction: option.RuleAction{
+				DNSRuleAction: option.DNSRuleAction{
 					Action: C.RuleActionTypeRoute,
-					RouteOptions: option.RouteActionOptions{
-						Outbound: OutboundDirectTag,
+					RouteOptions: option.DNSRouteActionOptions{
+						Server:         DNSMultiDirectTag,
+						Strategy:       hopt.DirectDnsDomainStrategy,
+						RewriteTTL:     &DEFAULT_DNS_TTL,
+						BypassIfFailed: false,
 					},
 				},
-			},
-		})
-	}
-	if hopt.RouteOptions.BlockQuic {
-		routeRules = append(routeRules, option.Rule{
-			Type: C.RuleTypeDefault,
-			DefaultOptions: option.DefaultRule{
-				RawDefaultRule: option.RawDefaultRule{
-					Protocol: []string{C.ProtocolQUIC},
+			})
+
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geoip-" + hopt.Region,
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/country/geoip-" + hopt.Region + ".srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
 				},
-				RuleAction: option.RuleAction{
-					Action: C.RuleActionTypeReject,
-					RejectOptions: option.RejectActionOptions{
-						Method: C.RuleActionRejectMethodDefault,
+			})
+			rulesets = append(rulesets, option.RuleSet{
+				Type:   C.RuleSetTypeRemote,
+				Tag:    "geosite-" + hopt.Region,
+				Format: C.RuleSetFormatBinary,
+				RemoteOptions: option.RemoteRuleSet{
+					URL:            "https://raw.githubusercontent.com/HZ-PRE/kuailei-geo/rule-set/country/geosite-" + hopt.Region + ".srs",
+					UpdateInterval: badoption.Duration(5 * time.Hour * 24),
+					DownloadDetour: OutboundSelectTag,
+				},
+			})
+
+			routeRules = append(routeRules, option.Rule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultRule{
+					RawDefaultRule: option.RawDefaultRule{
+						RuleSet: []string{
+							"geoip-" + hopt.Region,
+							"geosite-" + hopt.Region,
+						},
+					},
+					RuleAction: option.RuleAction{
+						Action: C.RuleActionTypeRoute,
+						RouteOptions: option.RouteActionOptions{
+							Outbound: OutboundDirectTag,
+						},
 					},
 				},
-			},
-		})
+			})
+		}
+		if hopt.RouteOptions.BlockQuic {
+			routeRules = append(routeRules, option.Rule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultRule{
+					RawDefaultRule: option.RawDefaultRule{
+						Protocol: []string{C.ProtocolQUIC},
+					},
+					RuleAction: option.RuleAction{
+						Action: C.RuleActionTypeReject,
+						RejectOptions: option.RejectActionOptions{
+							Method: C.RuleActionRejectMethodDefault,
+						},
+					},
+				},
+			})
+		}
+		if inputRoute != nil {
+			rulesets = appendUniqueRuleSets(rulesets, inputRoute.RuleSet)
+		}
 	}
-	if inputRoute != nil {
-		rulesets = appendUniqueRuleSets(rulesets, inputRoute.RuleSet)
+	finalOutbound := OutboundMainDetour
+	if hopt.RoutingMode == "global" {
+		finalOutbound = OutboundSelectTag
 	}
 	options.Route = &option.RouteOptions{
 		Rules:               routeRules,
-		Final:               OutboundMainDetour,
+		Final:               finalOutbound,
 		AutoDetectInterface: (!C.IsAndroid && !C.IsIos) && (hopt.EnableTun || hopt.EnableTunService),
 		DefaultDomainResolver: &option.DomainResolveOptions{
 			Server:   DNSMultiDirectTag,
