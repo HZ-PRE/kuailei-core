@@ -16,6 +16,7 @@ func TestHysteria2(t *testing.T) {
 		"outbounds": [
 		  {
 			"type": "hysteria2",
+                "stream_receive_window": 0, "connection_receive_window": 0,
 			"tag": "hysteria2 § 0",
 			"server": "example.com",
 			"server_port": 443,

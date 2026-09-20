@@ -253,12 +253,12 @@ func AWGSingbox(raw string) (*T.Endpoint, error) {
 		return badoption.Listable[netip.Prefix](out), nil
 	}
 
-	addresses, err := parsePrefixes(getOneOfN(u.Params, "", "ip", "address"))
+	addresses, err := parsePrefixes(getOneOfN(u.Params, "", "ip", "address", "localaddress"))
 	if err != nil {
 		return nil, err
 	}
 
-	allowedIPs, err := parsePrefixes(getOneOfN(u.Params, "", "localaddress", "allowedips"))
+	allowedIPs, err := parsePrefixes(getOneOfN(u.Params, "", "allowedips"))
 	if err != nil {
 		return nil, err
 	}

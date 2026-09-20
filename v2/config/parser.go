@@ -38,7 +38,7 @@ func ParseConfig(ctx context.Context, opt *ReadOptions, debug bool, configOpt *S
 	if err != nil {
 		return nil, err
 	}
-	return parseConfigContent(ctx, content, debug, nil, false)
+	return parseConfigContent(ctx, content, debug, configOpt, fullConfig)
 }
 
 func ParseConfigBytes(ctx context.Context, opt *ReadOptions, debug bool, configOpt *SdmOptions, fullConfig bool) ([]byte, error) {
@@ -64,7 +64,7 @@ func parseConfigContent(ctx context.Context, content []byte, debug bool, configO
 		fmt.Printf("Convert using json\n")
 		if tmpJsonObj, ok := tmpJsonResult.(map[string]interface{}); ok {
 			if tmpJsonObj["outbounds"] == nil && tmpJsonObj["endpoints"] == nil {
-				jsonObj["outbounds"] = []interface{}{jsonObj}
+				jsonObj["outbounds"] = []interface{}{tmpJsonObj}
 			} else {
 				if fullConfig || (configOpt != nil && configOpt.EnableFullConfig) {
 					jsonObj = tmpJsonObj
@@ -72,13 +72,16 @@ func parseConfigContent(ctx context.Context, content []byte, debug bool, configO
 					jsonObj = selectBuildInputSections(tmpJsonObj)
 				}
 			}
-		} else if jsonArray, ok := tmpJsonResult.([]map[string]interface{}); ok {
+		} else if jsonArray, ok := tmpJsonResult.([]interface{}); ok {
 			jsonObj["outbounds"] = jsonArray
 		} else {
 			return nil, fmt.Errorf("[SingboxParser] Incorrect Json Format")
 		}
 
-		newContent, _ := json.MarshalIndent(jsonObj, "", "  ")
+		newContent, err := json.MarshalIndent(jsonObj, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("[SingboxParser] encode config: %w", err)
+		}
 
 		return patchConfigStr(ctx, newContent, "SingboxParser", configOpt)
 	}

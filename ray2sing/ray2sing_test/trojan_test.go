@@ -20,13 +20,9 @@ func TestTrojan(t *testing.T) {
 			"server": "aws-ar-buenosaires-1.f1cflineb.com",
 			"server_port": 443,
 			"password": "your_password",
-			"tls": {
+			"tls": { "alpn": "http/1.1",
 			  "enabled": true,
-			  "server_name": "aws-ar-buenosaires-1.f1cflineb.com",
-			  "utls": {
-				"enabled": true,
-				"fingerprint": "chrome"
-			  }
+			  "server_name": "aws-ar-buenosaires-1.f1cflineb.com"
 			},
 			"transport": {
 			  "type": "ws",

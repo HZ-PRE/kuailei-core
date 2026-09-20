@@ -1,7 +1,6 @@
 package ray2sing
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -9,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/sagernet/sing-box/experimental/libbox"
-	T "github.com/sagernet/sing-box/option"
 )
 
 func CheckUrlAndJson(url string, expectedJSON string, t *testing.T) {
@@ -34,21 +32,17 @@ func CheckUrlAndJson(url string, expectedJSON string, t *testing.T) {
 	}
 }
 
-func json2map_prettystr(injson string) ([]T.Outbound, string, error) {
-	var conf T.Options
-	if err := conf.UnmarshalJSONContext(context.Background(), []byte(injson)); err != nil {
-		return conf.Outbounds, "", err
+func json2map_prettystr(injson string) (map[string]any, string, error) {
+	var conf map[string]any
+	if err := json.Unmarshal([]byte(injson), &conf); err != nil {
+		return nil, "", err
 	}
-	if len(conf.Outbounds) == 0 {
-		return conf.Outbounds, "", fmt.Errorf("No outbound")
+	if conf["outbounds"] == nil && conf["endpoints"] == nil {
+		return nil, "", fmt.Errorf("no outbounds or endpoints")
 	}
-	pp, err := json.MarshalIndent(conf.Outbounds, "", " ")
-	if err != nil {
-		return conf.Outbounds, "", err
-	}
-	return conf.Outbounds, string(pp), nil
+	pp, err := json.MarshalIndent(conf, "", " ")
+	return conf, string(pp), err
 }
-
 func sortedMarshal(data map[string]interface{}) (string, error) {
 	// Create a slice for storing sorted keys
 	var keys []string

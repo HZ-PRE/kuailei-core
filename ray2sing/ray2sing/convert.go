@@ -199,10 +199,9 @@ func GenerateConfigLite(input string, useXrayWhenPossible bool) (*option.Options
 
 func Ray2Singbox(ctx context.Context, configs string, useXrayWhenPossible bool) (out []byte, err error) {
 	convertedData, err := Ray2SingboxOptions(ctx, configs, useXrayWhenPossible)
-	// err = libbox.CheckConfigOptions(convertedData)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	if err != nil {
+		return nil, err
+	}
 	return convertedData.MarshalJSONContext(ctx)
 }
 func Ray2SingboxOptions(ctx context.Context, configs string, useXrayWhenPossible bool) (out *option.Options, err error) {

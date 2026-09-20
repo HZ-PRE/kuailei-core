@@ -15,9 +15,11 @@ func TestHysteria(t *testing.T) {
 		"outbounds": [
 			{
 				"type": "hysteria",
+                "stream_receive_window": 0, "connection_receive_window": 0,
 				"tag": "remarks § 0",
 				"server": "host",
 				"server_port": 443,
+                "auth_str": "123456", "up_mbps": 100, "down_mbps": 100, "obfs": "123456",
 				"tls": {
 				"enabled": true,
 				"server_name": "sni.domain",

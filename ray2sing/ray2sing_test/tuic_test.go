@@ -16,6 +16,7 @@ func TestTuic(t *testing.T) {
 		"outbounds": [
 		  {
 			"type": "tuic",
+                "stream_receive_window": 0, "connection_receive_window": 0,
 			"tag": "رایگان | TUIC | @V2rayCollector | CA🇨🇦 | 0️⃣1️⃣ § 0",
 			"server": "108.181.24.7",
 			"server_port": 23450,

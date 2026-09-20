@@ -20,14 +20,10 @@ func SSHSingbox(sshURL string) (*T.Outbound, error) {
 		privkeys = []string{}
 	}
 	for i := 0; i < len(privkeys); i++ {
-		if !strings.Contains(privkeys[i], prefix) {
-			privkeys[i] = prefix + "\n" + privkeys[i]
-		}
-		if !strings.Contains(privkeys[i], suffix) {
-			privkeys[i] = privkeys[i] + "\n" + suffix
-		}
-		privkeys[i] = strings.ReplaceAll(privkeys[i], prefix, prefix+"\n")
-		privkeys[i] = strings.ReplaceAll(privkeys[i], suffix, "\n"+suffix)
+		key := strings.TrimSpace(privkeys[i])
+		key = strings.TrimSpace(strings.TrimPrefix(key, prefix))
+		key = strings.TrimSpace(strings.TrimSuffix(key, suffix))
+		privkeys[i] = prefix + "\n" + key + "\n" + suffix + "\n"
 	}
 
 	hostkeys := strings.Split(decoded["hk"], ",")

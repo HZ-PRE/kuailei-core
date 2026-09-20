@@ -2,10 +2,12 @@ package ray2sing
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	T "github.com/sagernet/sing-box/option"
 )
@@ -22,21 +24,31 @@ type beepassData struct {
 func fetchSSConf(parsedURL *url.URL) ([]byte, error) {
 
 	// Construct the HTTP URL
-	httpURL := "https://" + parsedURL.Host + parsedURL.Path
+	httpURL := *parsedURL
+	httpURL.Scheme = "https"
+	httpURL.Fragment = ""
 
 	// Make the HTTP request
-	resp, err := http.Get(httpURL)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(httpURL.String())
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ssconf request failed: HTTP %d", resp.StatusCode)
+	}
 
 	// Read the response body
-	body, err := io.ReadAll(resp.Body)
+	const maxConfigSize = 1 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxConfigSize+1))
 	if err != nil {
 		return nil, err
 	}
 
+	if len(body) > maxConfigSize {
+		return nil, fmt.Errorf("ssconf response exceeds 1 MiB")
+	}
 	return body, nil
 }
 func parseAndFetchBeePass(body []byte) (*beepassData, error) {

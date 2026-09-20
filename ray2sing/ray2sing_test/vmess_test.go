@@ -15,7 +15,7 @@ func TestVmess(t *testing.T) {
 	{
 		"outbounds": [
 		  {
-			"type": "vmess",
+			"type": "vmess", "packet_encoding": "xudp",
 			"tag": "رایگان | VMESS | @Watashi_VPN | AU🇦🇺 | 0️⃣1️⃣ § 0",
 			"server": "51.161.130.173",
 			"server_port": 8080,

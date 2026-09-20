@@ -1,12 +1,15 @@
 package mobile
 
 import (
+	"context"
+	"github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	hcore "github.com/HZ-PRE/kuailei-core/v2/hcore"
 
 	_ "net/http/pprof"
 
 	_ "github.com/sagernet/gomobile"
 	"github.com/sagernet/sing-box/experimental/libbox"
+	"google.golang.org/protobuf/proto"
 )
 
 type SetupOptions struct {
@@ -59,6 +62,16 @@ func Stop() error {
 
 func GetServerPublicKey() []byte {
 	return hcore.GetGrpcServerPublicKey()
+}
+
+// GetSystemInfo provides the protobuf snapshot used by Android's foreground
+// notification. Byte encoding keeps the gomobile API compatible with Wire.
+func GetSystemInfo() ([]byte, error) {
+	info, err := (&hcore.CoreService{}).GetSystemInfo(context.Background(), &hcommon.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(info)
 }
 
 func AddGrpcClientPublicKey(clientPublicKey []byte) error {

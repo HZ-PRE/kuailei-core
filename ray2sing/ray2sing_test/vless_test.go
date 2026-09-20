@@ -20,7 +20,7 @@ func TestVless(t *testing.T) {
 			"server": "172.67.149.95",
 			"server_port": 443,
 			"uuid": "25da296e-1d96-48ae-9867-4342796cd742",
-			"tls": {
+			"tls": { "alpn": "http/1.1",
 			  "enabled": true,
 			  "server_name": "vless.229feb8b52a0e7e117ea76f8b591bcb3.workers.dev",
 			  "utls": {
@@ -37,7 +37,7 @@ func TestVless(t *testing.T) {
 			  "max_early_data": 2048,
 			  "early_data_header_name": "Sec-WebSocket-Protocol"
 			},
-			"packet_encoding": ""
+			"packet_encoding": "xudp"
 		  }
 		]
 	  }
