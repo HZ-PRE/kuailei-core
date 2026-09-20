@@ -5,18 +5,11 @@ package hcore
 */
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"io"
-	"net/http"
 
 	"net"
-	_ "net/http/pprof"
 	"os"
-	"strconv"
-	"strings"
 	sync "sync"
 	"time"
 
@@ -30,7 +23,6 @@ import (
 	"github.com/sagernet/sing-box/log"
 	E "github.com/sagernet/sing/common/exceptions"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
@@ -38,19 +30,17 @@ type CoreService struct {
 	UnimplementedCoreServer
 }
 
-func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) error {
+func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) (setupErr error) {
 	defer config.DeferPanicToError("setup", func(err error) {
+		setupErr = err
 		Log(LogLevel_FATAL, LogType_CORE, err.Error())
-		<-time.After(5 * time.Second)
 	})
-	if params.Debug {
-		go func() {
-			http.ListenAndServe("localhost:6060", nil)
-		}()
-	}
 	mu.Lock()
 	defer mu.Unlock()
-	if grpcServer[params.Mode] != nil {
+	if grpcServerRunning(params.Mode) {
+		if _, err := StartGrpcServerByMode(params.Listen, params.Mode, params.Secret); err != nil {
+			return err
+		}
 		Log(LogLevel_WARNING, LogType_CORE, "grpcServer already started")
 		return nil
 	}
@@ -106,7 +96,7 @@ func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) err
 		statusPropagationPort = int64(params.FlutterStatusPort)
 	// case SetupMode_GRPC_BACKGROUND_INSECURE:
 	default:
-		_, err := StartGrpcServerByMode(params.Listen, params.Mode)
+		_, err := StartGrpcServerByMode(params.Listen, params.Mode, params.Secret)
 		if err != nil {
 			return err
 		}
@@ -132,32 +122,7 @@ func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) err
 }
 
 func StartGrpcServer(listenAddressG string, service string) (*grpc.Server, error) {
-	lis, err := net.Listen("tcp", listenAddressG)
-	if err != nil {
-		log.Error("failed to listen: %v", err)
-		return nil, err
-	}
-	s := grpc.NewServer()
-	if service == "core" {
-		// Setup("./tmp/", "./tmp", "./tmp", 11111, false)
-		RegisterCoreServer(s, &CoreService{})
-		// pb.RegisterExtensionHostServiceServer(s, &extension.ExtensionHostService{})
-	} else if service == "hello" {
-		// RegisterHelloServer(s, &hello.HelloService{})
-	} else if service == "ezytel" {
-		ezytel.RegisterEzytelServer(s, ezytel.NewEzytelService(""))
-	} else if service == "tunnel" {
-		// RegisterTunnelServiceServer(s, &TunnelService{})
-	}
-	log.Info("Server listening on %s", listenAddressG)
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			log.Error("failed to serve: %v", err)
-		}
-		log.Info("Server stopped")
-		// cancel()
-	}()
-	return s, nil
+	return nil, fmt.Errorf("unauthenticated legacy RPC is disabled; use native bootstrap")
 }
 
 func StartCoreGrpcServer(listenAddressG string) (*grpc.Server, error) {
@@ -169,89 +134,52 @@ func StartHelloGrpcServer(listenAddressG string) (*grpc.Server, error) {
 }
 
 var (
-	certpair   *hutils.CertificatePair
-	grpcServer map[SetupMode]*grpc.Server = make(map[SetupMode]*grpc.Server)
-	caCertPool                            = x509.NewCertPool()
-	mu                                    = sync.Mutex{}
+	rpcPublicCertificate []byte
+	rpcBootstrapSecret   string
+	grpcServer           = make(map[SetupMode]*grpc.Server)
+	mu                   sync.Mutex
+	rpcMu                sync.Mutex
 )
 
-// StartGrpcServerByMode starts a gRPC server on the specified address with mTLS.
-func StartGrpcServerByMode(listenAddressG string, mode SetupMode) (*grpc.Server, error) {
-	// Validate the listen address
-	if !strings.Contains(listenAddressG, ":") {
-		return nil, fmt.Errorf("invalid listen address (no port): %s", listenAddressG)
+func grpcServerRunning(mode SetupMode) bool {
+	rpcMu.Lock()
+	defer rpcMu.Unlock()
+	return grpcServer[mode] != nil
+}
+
+// StartGrpcServerByMode starts a gRPC server on the specified address with pinned TLS and per-call authentication.
+func StartGrpcServerByMode(listenAddressG string, mode SetupMode, secret string) (*grpc.Server, error) {
+	rpcMu.Lock()
+	defer rpcMu.Unlock()
+	if err := validateRPCListen(listenAddressG); err != nil {
+		return nil, err
 	}
-	// Convert the port from string to uint16
-	portStr := strings.Split(listenAddressG, ":")[1]
-	port, err := strconv.ParseUint(portStr, 10, 16)
+	if rpcPublicCertificate != nil && secret != rpcBootstrapSecret {
+		return nil, fmt.Errorf("RPC bootstrap identity cannot change within the process")
+	}
+	if server := grpcServer[mode]; server != nil {
+		return server, nil
+	}
+	opts, cert, err := secureRPCOptions(secret)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert port %s to uint16: %v", portStr, err)
+		return nil, err
 	}
-	if hutils.IsPortInUse(uint16(port)) {
-		return nil, fmt.Errorf("port %s is already in use", portStr)
-	}
-	// Fetch the server private key and public key from the database
-	if _, exists := grpcServer[mode]; exists {
-		Log(LogLevel_WARNING, LogType_CORE, "grpcServer already started")
-		return grpcServer[mode], nil
-	}
-
-	if mode == SetupMode_GRPC_BACKGROUND_INSECURE || mode == SetupMode_GRPC_NORMAL_INSECURE {
-		grpcServer[mode] = grpc.NewServer()
-	} else {
-		table := db.GetTable[hcommon.AppSettings]()
-		Log(LogLevel_DEBUG, LogType_CORE, table)
-		grpcServerPrivateKey, err := table.Get("grpc_server_private_key")
-		grpcServerPublicKey, err2 := table.Get("grpc_server_public_key")
-		if err != nil || err2 != nil {
-			Log(LogLevel_DEBUG, LogType_CORE, fmt.Sprintf("failed to get grpc_server_private_key and grpc_server_public_key from database: %v %v\n", err, err2))
-			certpair, err = hutils.GenerateCertificatePair()
-			if err != nil {
-				Log(LogLevel_ERROR, LogType_CORE, fmt.Sprintf("failed to generate certificate pair: %v", err))
-
-				return nil, err
-			}
-			table.UpdateInsert(
-				&hcommon.AppSettings{Id: "grpc_server_public_key", Value: certpair.Certificate},
-				&hcommon.AppSettings{Id: "grpc_server_private_key", Value: certpair.PrivateKey},
-			)
-		} else {
-			certpair = &hutils.CertificatePair{
-				Certificate: grpcServerPublicKey.Value.([]byte),
-				PrivateKey:  grpcServerPrivateKey.Value.([]byte),
-			}
-		}
-		// Load server certificate and private key
-		serverCert, err := tls.X509KeyPair(certpair.Certificate, certpair.PrivateKey)
-		if err != nil {
-			Log(LogLevel_DEBUG, LogType_CORE, fmt.Sprintf("failed to load server certificate and key: %v\n", err))
-
-			return nil, err
-		}
-
-		// Create TLS credentials for the gRPC server
-		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{serverCert},
-			ClientAuth:   tls.RequireAndVerifyClientCert, // Enforce mutual TLS (mTLS)
-			ClientCAs:    caCertPool,                     // Client CAs to verify client certificates
-		}
-
-		// Create a new gRPC server with TLS credentials
-		creds := credentials.NewTLS(tlsConfig)
-		grpcServer[mode] = grpc.NewServer(grpc.Creds(creds))
-	}
+	server := grpc.NewServer(opts...)
 	// Register your gRPC service here
-	RegisterCoreServer(grpcServer[mode], &CoreService{})
-	hello.RegisterHelloServer(grpcServer[mode], &hello.HelloService{})
-	ezytel.RegisterEzytelServer(grpcServer[mode], ezytel.NewEzytelService(""))
+	RegisterCoreServer(server, &CoreService{})
+	hello.RegisterHelloServer(server, &hello.HelloService{})
+	ezytel.RegisterEzytelServer(server, ezytel.NewEzytelService(""))
 	// Listen on the provided address
 	lis, err := net.Listen("tcp", listenAddressG)
 	if err != nil {
 		Log(LogLevel_ERROR, LogType_CORE, fmt.Sprintf("failed to listen on %s: %v\n", listenAddressG, err))
 		return nil, err
 	}
+	rpcPublicCertificate = cert
+	rpcBootstrapSecret = secret
+	grpcServer[mode] = server
 	Log(LogLevel_DEBUG, LogType_CORE, fmt.Sprintf("grpcServer started on %s\n", listenAddressG))
-	log.Info("Server listening on %s", listenAddressG)
+	log.Info("Server listening on ", lis.Addr())
 
 	// Run the server in a goroutine
 	go func() {
@@ -259,7 +187,7 @@ func StartGrpcServerByMode(listenAddressG string, mode SetupMode) (*grpc.Server,
 			Log(LogLevel_FATAL, LogType_CORE, err.Error())
 			<-time.After(5 * time.Second)
 		})
-		if err := grpcServer[mode].Serve(lis); err != nil {
+		if err := server.Serve(lis); err != nil {
 			Log(LogLevel_DEBUG, LogType_CORE, fmt.Sprintf("failed to serve: %v\n", err))
 		}
 		Log(LogLevel_DEBUG, LogType_CORE, "Server stopped")
@@ -270,33 +198,17 @@ func StartGrpcServerByMode(listenAddressG string, mode SetupMode) (*grpc.Server,
 
 // GetGrpcServerPublicKey returns the gRPC server's public key.
 func GetGrpcServerPublicKey() []byte {
-	return certpair.Certificate
+	rpcMu.Lock()
+	defer rpcMu.Unlock()
+	return append([]byte(nil), rpcPublicCertificate...)
 }
-
-// AddGrpcClientPublicKey adds a client's public key to the CA pool for verification.
 func AddGrpcClientPublicKey(clientPublicKey []byte) error {
-	block, _ := pem.Decode(clientPublicKey)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		return fmt.Errorf("failed to decode client public key")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return fmt.Errorf("failed to parse client public key: %v", err)
-		}
-		cert = &x509.Certificate{
-			PublicKey: pubKey,
-		}
-	}
-	caCertPool.AddCert(cert)
-
-	return nil
+	return fmt.Errorf("use authenticated native RPC bootstrap")
 }
 
 func CloseGrpcServer(mode SetupMode) {
-	mu.Lock()
-	defer mu.Unlock()
+	rpcMu.Lock()
+	defer rpcMu.Unlock()
 	if server, ok := grpcServer[mode]; ok && server != nil {
 		server.Stop()
 		delete(grpcServer, mode)

@@ -70,9 +70,8 @@ func emptyOrErrorC(err error) *C.char {
 		return C.CString("")
 	}
 	log.Error(err.Error())
-	str := C.CString(err.Error())
-	defer C.free(unsafe.Pointer(str))
-	return str
+	// The FFI caller reads the result and releases it with freeString.
+	return C.CString(err.Error())
 }
 
 //export setup
