@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package accountcrypto;
+option go_package = "github.com/HZ-PRE/kuailei-core/v2/accountcrypto";
+import "v2/hcommon/common.proto";
+
+// Only exposed on the authenticated, pinned-TLS local core RPC server.
+service AccountCrypto {
+  rpc GetAppAesKey (hcommon.Empty) returns (hcommon.Response);
+}

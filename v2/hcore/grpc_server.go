@@ -13,6 +13,7 @@ import (
 	sync "sync"
 	"time"
 
+	"github.com/HZ-PRE/kuailei-core/v2/accountcrypto"
 	"github.com/HZ-PRE/kuailei-core/v2/config"
 	"github.com/HZ-PRE/kuailei-core/v2/db"
 	"github.com/HZ-PRE/kuailei-core/v2/ezytel"
@@ -167,6 +168,7 @@ func StartGrpcServerByMode(listenAddressG string, mode SetupMode, secret string)
 	server := grpc.NewServer(opts...)
 	// Register your gRPC service here
 	RegisterCoreServer(server, &CoreService{})
+	accountcrypto.RegisterAccountCryptoServer(server, &accountcrypto.Service{})
 	hello.RegisterHelloServer(server, &hello.HelloService{})
 	ezytel.RegisterEzytelServer(server, ezytel.NewEzytelService(""))
 	// Listen on the provided address

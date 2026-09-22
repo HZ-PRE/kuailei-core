@@ -1,4 +1,5 @@
 *.dylib
+/v2/accountcrypto/app_key_local.go
 *.dll
 *.so
 

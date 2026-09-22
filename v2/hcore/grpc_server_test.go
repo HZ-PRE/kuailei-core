@@ -11,10 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/HZ-PRE/kuailei-core/v2/accountcrypto"
+	"github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"github.com/HZ-PRE/kuailei-core/v2/hello"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func TestRPCServerBootstrapLifecycle(t *testing.T) {
@@ -75,7 +79,13 @@ func TestRPCServerBootstrapLifecycle(t *testing.T) {
 	defer conn.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	if _, err := accountcrypto.NewAccountCryptoClient(conn).GetAppAesKey(ctx, &hcommon.Empty{}); status.Code(err) != codes.Unauthenticated {
+		t.Fatal("account key RPC accepted unauthenticated access")
+	}
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+secret)
+	if _, err := accountcrypto.NewAccountCryptoClient(conn).GetAppAesKey(ctx, &hcommon.Empty{}); err != nil && status.Code(err) != codes.FailedPrecondition {
+		t.Fatal("account key RPC was not registered on the authenticated core server")
+	}
 	if _, err = hello.NewHelloClient(conn).SayHello(ctx, &hello.HelloRequest{Name: "bootstrap-regression"}); err != nil {
 		t.Fatal(err)
 	}
