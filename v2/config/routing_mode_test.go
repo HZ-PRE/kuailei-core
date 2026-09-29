@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	C "github.com/sagernet/sing-box/constant"
@@ -42,12 +43,17 @@ func TestRoutingModeBuildAndSwitchBack(t *testing.T) {
 				t.Fatal("lost TUN loop prevention or node DNS bootstrap")
 			}
 			if mode == "global" {
-				if len(options.Route.Rules) != 2 || len(options.Route.RuleSet) != 0 {
-					t.Fatalf("business routing leaked into global mode: %+v", options.Route)
+				if len(options.Route.Rules) != 3 || len(options.Route.RuleSet) != 0 {
+					t.Fatalf("unexpected global routing: %d rules, %d rule sets", len(options.Route.Rules), len(options.Route.RuleSet))
 				}
 				if options.Route.Rules[0].DefaultOptions.Action != C.RuleActionTypeSniff ||
 					options.Route.Rules[1].DefaultOptions.Action != C.RuleActionTypeHijackDNS {
 					t.Fatal("lost DNS sniffing/hijacking")
+				}
+				ipInfo := options.Route.Rules[2].DefaultOptions
+				if ipInfo.Action != C.RuleActionTypeRoute || ipInfo.RouteOptions.Outbound != OutboundDirectTag ||
+					!slices.Equal(ipInfo.DomainSuffix, []string{"api.ip.sb", "ipwho.is"}) {
+					t.Fatal("IP lookup domains must stay direct in global mode")
 				}
 				for _, rule := range options.DNS.Rules {
 					r := rule.DefaultOptions

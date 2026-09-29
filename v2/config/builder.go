@@ -632,6 +632,23 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 
 	// Global mode keeps DNS handling above, but never loads business routing
 	// rules or their rule sets (including imported, LAN and blocking rules).
+	routeRules = append(routeRules, option.Rule{
+		Type: C.RuleTypeDefault,
+		DefaultOptions: option.DefaultRule{
+			RawDefaultRule: option.RawDefaultRule{
+				DomainSuffix: []string{
+					"api.ip.sb",
+					"ipwho.is",
+				},
+			},
+			RuleAction: option.RuleAction{
+				Action: C.RuleActionTypeRoute,
+				RouteOptions: option.RouteActionOptions{
+					Outbound: OutboundDirectTag,
+				},
+			},
+		},
+	})
 	if hopt.RoutingMode != "global" {
 		routeRules = append(routeRules, option.Rule{
 			Type: C.RuleTypeDefault,
