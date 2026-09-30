@@ -82,7 +82,13 @@ func TestRPCServerBootstrapLifecycle(t *testing.T) {
 	if _, err := accountcrypto.NewAccountCryptoClient(conn).GetAppAesKey(ctx, &hcommon.Empty{}); status.Code(err) != codes.Unauthenticated {
 		t.Fatal("account key RPC accepted unauthenticated access")
 	}
+	if _, err := accountcrypto.NewAccountCryptoClient(conn).GetApiListKeys(ctx, &hcommon.Empty{}); status.Code(err) != codes.Unauthenticated {
+		t.Fatal("API list keys RPC accepted unauthenticated access")
+	}
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+secret)
+	if _, err := accountcrypto.NewAccountCryptoClient(conn).GetApiListKeys(ctx, &hcommon.Empty{}); err != nil && status.Code(err) != codes.FailedPrecondition {
+		t.Fatal("API list keys RPC unavailable on authenticated core server")
+	}
 	if _, err := accountcrypto.NewAccountCryptoClient(conn).GetAppAesKey(ctx, &hcommon.Empty{}); err != nil && status.Code(err) != codes.FailedPrecondition {
 		t.Fatal("account key RPC was not registered on the authenticated core server")
 	}
