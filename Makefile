@@ -23,17 +23,8 @@ CRONET_DIR=./cronet
 .PHONY: protos
 protos:
 	go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
-	# protoc --go_out=./ --go-grpc_out=./ --proto_path=sdmrpc sdmrpc/*.proto
-	# for f in $(shell find v2 -name "*.proto"); do \
-	# 	protoc --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go_out=./ --go-grpc_out=./  $$f; \
-	# done
-	# for f in $(shell find extension -name "*.proto"); do \
-	# 	protoc --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go_out=./ --go-grpc_out=./  $$f; \
-	# done
-	protoc --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go_out=./ --go-grpc_out=./  $(shell find v2 -name "*.proto") $(shell find extension -name "*.proto")
-	protoc --doc_out=./docs  --doc_opt=markdown,sdmrpc.md $(shell find v2 -name "*.proto") $(shell find extension -name "*.proto")
-	# protoc --js_out=import_style=commonjs,binary:./extension/html/rpc/ --grpc-web_out=import_style=commonjs,mode=grpcwebtext:./extension/html/rpc/ $(shell find v2 -name "*.proto") $(shell find extension -name "*.proto")
-	# npx browserify extension/html/rpc/extension.js >extension/html/rpc.js
+	protoc --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go_out=./ --go-grpc_out=./  $(shell find v2 -name "*.proto")
+	protoc --doc_out=./docs  --doc_opt=markdown,sdmrpc.md $(shell find v2 -name "*.proto")
 
 
 lib_install: prepare

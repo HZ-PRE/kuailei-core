@@ -16,7 +16,6 @@ import (
 	"github.com/HZ-PRE/kuailei-core/v2/accountcrypto"
 	"github.com/HZ-PRE/kuailei-core/v2/config"
 	"github.com/HZ-PRE/kuailei-core/v2/db"
-	"github.com/HZ-PRE/kuailei-core/v2/ezytel"
 	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"github.com/HZ-PRE/kuailei-core/v2/hello"
 	hutils "github.com/HZ-PRE/kuailei-core/v2/hutils"
@@ -170,7 +169,6 @@ func StartGrpcServerByMode(listenAddressG string, mode SetupMode, secret string)
 	RegisterCoreServer(server, &CoreService{})
 	accountcrypto.RegisterAccountCryptoServer(server, &accountcrypto.Service{})
 	hello.RegisterHelloServer(server, &hello.HelloService{})
-	ezytel.RegisterEzytelServer(server, ezytel.NewEzytelService(""))
 	// Listen on the provided address
 	lis, err := net.Listen("tcp", listenAddressG)
 	if err != nil {
