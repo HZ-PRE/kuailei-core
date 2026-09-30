@@ -25,8 +25,7 @@ func TestParseConfigPreservesRequestedFullConfig(t *testing.T) {
 	for _, enableOption := range []bool{false, true} {
 		hopts := DefaultSdmOptions()
 		hopts.EnableFullConfig = enableOption
-		opts, err := ParseConfig(libbox.BaseContext(nil), &ReadOptions{Content: `{"log":{"level":"error"},"outbounds":[{"type":"direct"}]}`,
-		}, false, hopts, !enableOption)
+		opts, err := ParseConfig(libbox.BaseContext(nil), &ReadOptions{Content: `{"log":{"level":"error"},"outbounds":[{"type":"direct"}]}`}, false, hopts, !enableOption)
 		if err != nil {
 			t.Fatal(err)
 		}

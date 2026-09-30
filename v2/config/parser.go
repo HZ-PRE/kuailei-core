@@ -10,7 +10,6 @@ import (
 
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/option"
-	"github.com/sagernet/sing/common/batch"
 	SJ "github.com/sagernet/sing/common/json"
 	"github.com/sdm/ray2sing/ray2sing"
 	"github.com/xmdhs/clash2singbox/convert"
@@ -145,27 +144,12 @@ func patchConfigStr(ctx context.Context, content []byte, name string, configOpt 
 	return patchConfigOptions(ctx, &options, name, configOpt)
 }
 func patchConfigOptions(ctx context.Context, options *option.Options, name string, configOpt *SdmOptions) (*option.Options, error) {
-	b, _ := batch.New(ctx, batch.WithConcurrencyNum[*option.Endpoint](2))
-	for _, base := range options.Endpoints {
-		out := base
-		b.Go(base.Tag, func() (*option.Endpoint, error) {
-			err := patchWarp(&out, configOpt, false, nil)
-			if err != nil {
-				return nil, fmt.Errorf("[Warp] patch warp error: %w", err)
-			}
-			// options.Outbounds[i] = base
-			return &out, nil
-		})
+	if len(options.Endpoints) != 0 {
+		return nil, fmt.Errorf("VPN endpoints are not supported")
 	}
-	if res, err := b.WaitAndGetResult(); err != nil {
-		return nil, err
-	} else {
-		for i, base := range options.Endpoints {
-			options.Endpoints[i] = *res[base.Tag].Value
-		}
+	if configOpt.Warp.EnableWarp || configOpt.Warp2.EnableWarp {
+		return nil, fmt.Errorf("WARP is not supported")
 	}
-
-	// fmt.Printf("%s\n", content)
 	return validateResult(ctx, options, name)
 }
 

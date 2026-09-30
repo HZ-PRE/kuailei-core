@@ -15,12 +15,6 @@ func buildRegex() *regexp.Regexp {
 	for k := range configTypes {
 		prefixSet[k] = struct{}{}
 	}
-	for k := range endpointParsers {
-		prefixSet[k] = struct{}{}
-	}
-	for k := range xrayConfigTypes {
-		prefixSet[k] = struct{}{}
-	}
 
 	var prefixes []string
 	for k := range prefixSet {
@@ -33,7 +27,7 @@ func buildRegex() *regexp.Regexp {
 	})
 
 	// pattern := `(` + strings.Join(prefixes, "|") + `)`
-	pattern := `(?m)^(?:` + strings.Join(prefixes, "|") + `)`
+	pattern := `(?m)^(?:[A-Za-z][A-Za-z0-9+.-]*://|` + strings.Join(prefixes, "|") + `)`
 
 	return regexp.MustCompile(pattern)
 }
@@ -49,10 +43,10 @@ func splitByPrefix(text string) []string {
 
 	var result []string
 
-	// Preserve header
-	// if indexes[0][0] > 0 {
-	// 	result = append(result, text[:indexes[0][0]])
-	// }
+	// Preserve invalid input so unsupported nodes cannot be silently discarded.
+	if indexes[0][0] > 0 {
+		result = append(result, text[:indexes[0][0]])
+	}
 
 	for i := 0; i < len(indexes); i++ {
 		start := indexes[i][0]

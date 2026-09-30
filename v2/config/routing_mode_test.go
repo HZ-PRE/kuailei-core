@@ -20,7 +20,7 @@ func TestRoutingModeBuildAndSwitchBack(t *testing.T) {
 	hopts.EnableTun = true
 	hopts.Rules = []Rule{{Enabled: true, Outbound: Outbound_direct, Domains: []string{"app.example"}}}
 	content := `{
-   "outbounds": [{"type":"socks","tag":"test-node","server":"127.0.0.1","server_port":1080}],
+   "outbounds": [{"type":"vless","tag":"test-node","server":"127.0.0.1","server_port":1080,"uuid":"00000000-0000-4000-8000-000000000001"}],
    "route": {
      "rules": [{"domain":["profile.example"],"action":"reject"}],
      "rule_set": [{"type":"remote","tag":"profile-set","format":"binary","url":"https://example.com/test.srs"}]

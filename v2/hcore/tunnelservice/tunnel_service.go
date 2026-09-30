@@ -49,7 +49,7 @@ func makeTunnelConfig(in *TunnelStartRequest) option.Options {
 			{
 				Type: C.TypeTun,
 				Tag:  "tun-in",
-				Options: option.TunInboundOptions{
+				Options: &option.TunInboundOptions{
 					EndpointIndependentNat: in.EndpointIndependentNat,
 					StrictRoute:            in.StrictRoute,
 					AutoRoute:              true,
@@ -61,9 +61,9 @@ func makeTunnelConfig(in *TunnelStartRequest) option.Options {
 		},
 		Outbounds: []option.Outbound{
 			{
-				Type: C.TypeSOCKS,
+				Type: "local-socks",
 				Tag:  "socks-out",
-				Options: option.SOCKSOutboundOptions{
+				Options: &option.LocalSOCKSBridgeOptions{
 					ServerOptions: option.ServerOptions{
 						Server:     "127.0.0.1",
 						ServerPort: uint16(in.ServerPort),

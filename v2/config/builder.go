@@ -19,7 +19,6 @@ import (
 	sdns "github.com/sagernet/sing-box/dns"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/json/badoption"
-	"github.com/sagernet/wireguard-go/sdm"
 )
 
 const (
@@ -64,6 +63,9 @@ var (
 // TODO include selectors
 func BuildConfig(ctx context.Context, hopts *SdmOptions, inputOpt *ReadOptions) (*option.Options, error) {
 
+	if hopts.Warp.EnableWarp || hopts.Warp2.EnableWarp {
+		return nil, fmt.Errorf("WARP is not supported; use SS+ or VLESS")
+	}
 	input, err := ReadSingOptions(ctx, inputOpt)
 	if err != nil {
 		return nil, err
@@ -130,14 +132,12 @@ func getHostnameIfNotIP(inp string) (string, error) {
 
 func setOutbounds(options *option.Options, input *option.Options, opt *SdmOptions, staticIPs *map[string][]string) error {
 	var outbounds []option.Outbound
-	var endpoints []option.Endpoint
 	var tags []string
 	// OutboundMainProxyTag = OutboundSelectTag
 	// inbound==warp over proxies
 	// outbound==proxies over warp
 	OutboundMainDetour = OutboundSelectTag
 	OutboundWARPConfigDetour = OutboundDirectFragmentTag
-	hasPsiphon := false
 	for _, out := range input.Outbounds {
 
 		if contains(PredefinedOutboundTags, out.Tag) {
@@ -158,92 +158,14 @@ func setOutbounds(options *option.Options, input *option.Options, opt *SdmOption
 			if contains([]string{"direct", "bypass", "block"}, out.Tag) {
 				continue
 			}
-			if out.Type == C.TypePsiphon {
-				if hasPsiphon {
-					continue
-				}
-				hasPsiphon = true
-			}
 			if !strings.Contains(out.Tag, "§hide§") {
 				tags = append(tags, out.Tag)
 			}
 			// OutboundWARPConfigDetour = OutboundSelectTag
-			out = *patchSdmWarpFromConfig(&out, *opt)
 			outbounds = append(outbounds, out)
 		}
 	}
 
-	if opt.Warp.EnableWarp {
-		// wg := getOrGenerateWarpLocallyIfNeeded(&opt.Warp)
-
-		// out, err := GenerateWarpSingbox(wg, opt.Warp.CleanIP, opt.Warp.CleanPort, &option.WireGuardSdm{
-		// 	FakePackets:      opt.Warp.FakePackets,
-		// 	FakePacketsSize:  opt.Warp.FakePacketSize,
-		// 	FakePacketsDelay: opt.Warp.FakePacketDelay,
-		// 	FakePacketsMode:  opt.Warp.FakePacketMode,
-		// })
-		out, err := GenerateWarpSingboxNew("p1", &sdm.NoiseOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to generate warp config: %v", err)
-		}
-		out.Tag = WARPConfigTag
-		if opts, ok := out.Options.(*option.WARPEndpointOptions); ok {
-			if opt.Warp.Mode == "warp_over_proxy" {
-				opts.Detour = OutboundSelectTag
-				opts.MTU = 1280
-			} else {
-				opts.Detour = OutboundDirectTag
-				opt.MTU = max(opt.MTU, 1340)
-			}
-
-		}
-
-		OutboundMainDetour = WARPConfigTag
-		// patchWarp(out, opt, true, nil)
-		out, err = patchEndpoint(out, *opt, staticIPs)
-		if err != nil {
-			return err
-		}
-		endpoints = append(endpoints, *out)
-	}
-	for _, end := range input.Endpoints {
-		if contains(PredefinedOutboundTags, end.Tag) {
-			continue
-		}
-		if opt.Warp.EnableWarp {
-			if end.Type == C.TypeWARP {
-				if opts, ok := end.Options.(*option.WARPEndpointOptions); ok {
-					if opts.UniqueIdentifier == "p1" {
-						continue
-					}
-					if opt.Warp.EnableWarp && opt.Warp.Mode == "warp_over_proxy" {
-						opt.MTU = max(opt.MTU, 1340)
-					}
-				}
-			}
-			if end.Type == C.TypeWireGuard {
-				if opts, ok := end.Options.(*option.WireGuardEndpointOptions); ok {
-					if opts.PrivateKey == opt.Warp.WireguardConfig.PrivateKey {
-						continue
-					}
-					if opt.Warp.EnableWarp && opt.Warp.Mode == "warp_over_proxy" {
-						opt.MTU = max(opt.MTU, 1340)
-					}
-				}
-			}
-		}
-
-		out, err := patchEndpoint(&end, *opt, staticIPs)
-		if err != nil {
-			return err
-		}
-
-		if !strings.Contains(out.Tag, "§hide§") {
-			tags = append(tags, out.Tag)
-		}
-
-		endpoints = append(endpoints, *out)
-	}
 	if len(opt.ConnectionTestUrls) == 0 {
 		opt.ConnectionTestUrls = []string{opt.ConnectionTestUrl, "https://www.google.com/generate_204", "http://captive.apple.com/generate_204", "https://cp.cloudflare.com"}
 		if isBlockedConnectionTestUrl(opt.ConnectionTestUrl) {
@@ -297,6 +219,9 @@ func setOutbounds(options *option.Options, input *option.Options, opt *SdmOption
 			InterruptExistConnections: true,
 		},
 	}
+	if len(tags) == 0 {
+		return fmt.Errorf("no selectable SS+ or VLESS nodes")
+	}
 	defaultSelect := tags[0]
 
 	for _, tag := range tags {
@@ -329,7 +254,7 @@ func setOutbounds(options *option.Options, input *option.Options, opt *SdmOption
 	}
 	outbounds = append([]option.Outbound{selector}, outbounds...)
 
-	options.Endpoints = endpoints
+	options.Endpoints = nil
 	options.Outbounds = append(
 		outbounds,
 		[]option.Outbound{
@@ -398,7 +323,7 @@ func setExperimental(options *option.Options, hopt *SdmOptions) {
 
 			CacheFile: &option.CacheFileOptions{
 				Enabled:         true,
-				StoreWARPConfig: true,
+				StoreWARPConfig: false,
 				Path:            "data/clash.db",
 			},
 
@@ -1219,19 +1144,6 @@ func appendUniqueRuleSets(base []option.RuleSet, additions []option.RuleSet) []o
 	return base
 }
 
-func patchSdmWarpFromConfig(out *option.Outbound, opt SdmOptions) *option.Outbound {
-	if out.Type == C.TypePsiphon {
-		return out
-	}
-	if opt.Warp.EnableWarp && opt.Warp.Mode == "proxy_over_warp" {
-		if opts, ok := out.Options.(option.DialerOptionsWrapper); ok {
-			dialer := opts.TakeDialerOptions()
-			dialer.Detour = WARPConfigTag
-			opts.ReplaceDialerOptions(dialer)
-		}
-	}
-	return out
-}
 
 var (
 	ipMaps      = map[string][]string{}
