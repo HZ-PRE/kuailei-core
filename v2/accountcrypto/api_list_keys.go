@@ -32,9 +32,10 @@ func (s *Service) GetApiListKeys(ctx context.Context, request *hcommon.Empty) (*
 		return nil, status.Error(codes.FailedPrecondition, "API list verification key is invalid")
 	}
 	data, err := json.Marshal(map[string]string{
-		"keyId":     apiListKeyID,
-		"aesKey":    accountKey.Message,
-		"publicKey": base64.StdEncoding.EncodeToString(publicKey),
+		"configEncryption": "1",
+		"keyId":            apiListKeyID,
+		"aesKey":           accountKey.Message,
+		"publicKey":        base64.StdEncoding.EncodeToString(publicKey),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "API list key configuration unavailable")

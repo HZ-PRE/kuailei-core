@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 	"github.com/HZ-PRE/kuailei-core/v2/db"
 	"github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	tmdb "github.com/tendermint/tm-db"
@@ -15,6 +16,9 @@ import (
 // rename. Run this test with both go test and the release GOGARBLE selection.
 func TestPreObfuscationSettingsRemainReadable(t *testing.T) {
 	t.Chdir(t.TempDir())
+	if err := configvault.Initialize(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
 	const fixture = "297f0301010b41707053657474696e677301ff8000010201024964010c00010556616c7565011000000037ff80010d636f6d7061746962696c6974790106737472696e670c1b001973746f7265642d6265666f72652d6f62667573636174696f6e00"
 	value, err := hex.DecodeString(fixture)
 	if err != nil {
@@ -32,6 +36,9 @@ func TestPreObfuscationSettingsRemainReadable(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := legacy.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.EncryptExisting(); err != nil {
 		t.Fatal(err)
 	}
 	table := db.GetTable[hcommon.AppSettings]()

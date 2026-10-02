@@ -10,11 +10,13 @@ import (
 
 	"net"
 	"os"
+	"path/filepath"
 	sync "sync"
 	"time"
 
 	"github.com/HZ-PRE/kuailei-core/v2/accountcrypto"
 	"github.com/HZ-PRE/kuailei-core/v2/config"
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 	"github.com/HZ-PRE/kuailei-core/v2/db"
 	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"github.com/HZ-PRE/kuailei-core/v2/hello"
@@ -47,6 +49,12 @@ func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) (se
 	static.BaseContext = libbox.BaseContext(platformInterface)
 	static.debug = params.Debug
 	static.globalPlatformInterface = platformInterface
+	if err := configvault.Initialize(params.BasePath); err != nil {
+		return err
+	}
+	if err := configvault.MigrateManagedFiles(params.WorkingDir); err != nil {
+		return err
+	}
 	tcpConn := true // runtime.GOOS == "windows" // TODO add TVOS
 	libbox.Setup(
 		&libbox.SetupOptions{
@@ -64,7 +72,15 @@ func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) (se
 	Log(LogLevel_DEBUG, LogType_CORE, fmt.Sprintf("libbox.Setup success %s %s %s %v", params.BasePath, params.WorkingDir, params.TempDir, tcpConn))
 
 	sWorkingPath = params.WorkingDir
+	dataPath, err := filepath.Abs(filepath.Join(sWorkingPath, "data"))
+	if err != nil {
+		return err
+	}
+	db.SetDirectory(dataPath)
 	os.Chdir(sWorkingPath)
+	if err := db.EncryptExisting(); err != nil {
+		return err
+	}
 	sTempPath = params.TempDir
 	sUserID = os.Getuid()
 	sGroupID = os.Getgid()
@@ -103,7 +119,6 @@ func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) (se
 	}
 	settings := db.GetTable[hcommon.AppSettings]()
 	val, err := settings.Get("SdmSettingsJson")
-	Log(LogLevel_DEBUG, LogType_CORE, "SdmSettingsJson", val, err)
 	if val == nil || err != nil {
 		// if params.Mode == SetupMode_GRPC_BACKGROUND_INSECURE {
 		_, err := ChangeSdmSettings(&ChangeSdmSettingsRequest{SdmSettingsJson: ""}, false)

@@ -6,17 +6,39 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	tmdb "github.com/tendermint/tm-db"
 )
 
+var directoryState = struct {
+	sync.RWMutex
+	path string
+}{path: "./data"}
+
+func SetDirectory(path string) {
+	directoryState.Lock()
+	directoryState.path = path
+	directoryState.Unlock()
+}
+
+func dataDirectory() string {
+	directoryState.RLock()
+	defer directoryState.RUnlock()
+	return directoryState.path
+}
+
 // getDB initializes the database with retry logic. If it fails after 100 attempts, it returns nil.
 func getDB(name string, readOnly bool) (tmdb.DB, error) {
 	// Check if the database file exists; if not, set to readOnly
-	dbPath := "data/" + name + ".db"
+	directory := dataDirectory()
+	dbPath := filepath.Join(directory, name+".db")
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		readOnly = false
 	}
@@ -34,7 +56,7 @@ func getDB(name string, readOnly bool) (tmdb.DB, error) {
 		// Set readOnly to true for the first 80 attempts
 		opts := &opt.Options{ReadOnly: readOnly && i < 80}
 
-		db, err = tmdb.NewGoLevelDBWithOpts(name, "./data", opts)
+		db, err = tmdb.NewGoLevelDBWithOpts(name, directory, opts)
 		if err == nil {
 			return db, nil
 		}
@@ -144,9 +166,10 @@ func Serialize(data any) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(data)
-	return buf.Bytes(), err
-
-	// return json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return configvault.Seal(buf.Bytes(), "database")
 }
 
 func SerializeKey(data any) ([]byte, error) {
@@ -157,13 +180,97 @@ func SerializeKey(data any) ([]byte, error) {
 }
 
 func Deserialize[T any](data []byte) (*T, error) {
+	data, err := configvault.Open(data, "database")
+	if err != nil {
+		return nil, err
+	}
 	var obj T
 	buf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&obj)
+	err = dec.Decode(&obj)
 	return &obj, err
 
 	// return &obj, json.Unmarshal(data, &obj)
+}
+
+// EncryptExisting upgrades legacy values without changing Gob model names or
+// keys. Compaction removes superseded plaintext from live LevelDB files. A
+// marker ensures an interrupted migration is compacted on the next bootstrap.
+func EncryptExisting() error {
+	complete, err := configvault.MigrationComplete("database", dataDirectory())
+	if err != nil || complete {
+		return err
+	}
+	entries, err := os.ReadDir(dataDirectory())
+	if os.IsNotExist(err) {
+		return configvault.MarkMigrationComplete("database", dataDirectory())
+	}
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasSuffix(entry.Name(), ".db") {
+			continue
+		}
+		if err := encryptTable(strings.TrimSuffix(entry.Name(), ".db")); err != nil {
+			return err
+		}
+	}
+	return configvault.MarkMigrationComplete("database", dataDirectory())
+}
+
+func encryptTable(name string) error {
+	store, err := getDB(name, false)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+	iterator, err := store.Iterator(nil, nil)
+	if err != nil {
+		return err
+	}
+	batch := store.NewBatch()
+	defer batch.Close()
+	changed := false
+	for ; iterator.Valid(); iterator.Next() {
+		value := iterator.Value()
+		if configvault.IsEncrypted(value) {
+			continue
+		}
+		sealed, sealErr := configvault.Seal(value, "database")
+		if sealErr != nil {
+			iterator.Close()
+			return sealErr
+		}
+		if err = batch.Set(iterator.Key(), sealed); err != nil {
+			iterator.Close()
+			return err
+		}
+		changed = true
+	}
+	err = iterator.Error()
+	iterator.Close()
+	if err != nil {
+		return err
+	}
+	marker := filepath.Join(dataDirectory(), name+".vault-migration")
+	if changed {
+		if err := os.WriteFile(marker, []byte{1}, 0600); err != nil {
+			return err
+		}
+		if err := batch.WriteSync(); err != nil {
+			return err
+		}
+	}
+	if _, err := os.Stat(marker); err == nil {
+		if err := store.(*tmdb.GoLevelDB).ForceCompact(nil, nil); err != nil {
+			return err
+		}
+		return os.Remove(marker)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 // UpdateInsert inserts or updates multiple items in the database.

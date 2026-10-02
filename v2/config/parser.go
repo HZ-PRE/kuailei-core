@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"os"
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/option"
@@ -23,7 +23,7 @@ var configByte []byte
 
 func ReadContent(ctx context.Context, opt *ReadOptions) ([]byte, error) {
 	if opt.Content == "" {
-		contentBytes, err := os.ReadFile(opt.Path)
+		contentBytes, err := configvault.ReadFile(opt.Path)
 		if err != nil {
 			return nil, err
 		}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/HZ-PRE/kuailei-core/v2/config"
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 	"github.com/HZ-PRE/kuailei-core/v2/db"
 	"github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"github.com/HZ-PRE/kuailei-core/v2/hcommon/request"
@@ -300,7 +301,7 @@ func UpdateContent(ctx context.Context, profileId, content string) error {
 		return err
 	}
 
-	return os.WriteFile(profilesDirName+"/"+profileId+".info", []byte(content), 0o644)
+	return configvault.WriteFile(profilesDirName+"/"+profileId+".info", []byte(content))
 }
 
 func AddByContent(ctx context.Context, content, name string, markAsActive bool) (*ProfileEntity, error) {

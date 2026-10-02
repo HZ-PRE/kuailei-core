@@ -25,6 +25,7 @@ require (
 require (
 	github.com/AdguardTeam/golibs v0.32.7 // indirect
 	github.com/DataDog/zstd v1.4.1 // indirect
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/ameshkov/dnscrypt/v2 v2.4.0 // indirect
 	github.com/ameshkov/dnsstamps v1.0.3 // indirect
 	github.com/anthropics/anthropic-sdk-go v1.26.0 // indirect

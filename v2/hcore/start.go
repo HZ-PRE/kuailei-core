@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/HZ-PRE/kuailei-core/v2/config"
@@ -111,22 +110,13 @@ func StartService(ctx context.Context, in *StartRequest) (coreResponse *CoreInfo
 	if err != nil {
 		return errorWrapper(MessageType_ERROR_BUILDING_CONFIG, err)
 	}
-	saveLastStartRequest(in)
+	if err := saveLastStartRequest(in); err != nil {
+		return errorWrapper(MessageType_ERROR_BUILDING_CONFIG, err)
+	}
 
 	Log(LogLevel_DEBUG, LogType_CORE, "Main Service pre start")
 	if err := service_manager.OnMainServicePreStart(options); err != nil {
 		return errorWrapper(MessageType_ERROR_EXTENSION, err)
-	}
-	currentBuildConfigPath := filepath.Join(sWorkingPath, "data/current-config.json")
-	Log(LogLevel_DEBUG, LogType_CORE, "Saving config to ", currentBuildConfigPath)
-
-	config.SaveCurrentConfig(ctx, currentBuildConfigPath, *options)
-	if static.debug {
-		pout, err := options.MarshalJSONContext(ctx)
-		if err != nil {
-			return errorWrapper(MessageType_ERROR_BUILDING_CONFIG, err)
-		}
-		Log(LogLevel_INFO, LogType_CORE, "Current Config is:\n", string(pout))
 	}
 	ctx = libbox.FromContext(ctx, static.globalPlatformInterface)
 	if static.globalPlatformInterface != nil {

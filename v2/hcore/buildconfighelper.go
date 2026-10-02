@@ -3,7 +3,7 @@ package hcore
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 
 	"github.com/HZ-PRE/kuailei-core/v2/config"
 	"github.com/HZ-PRE/kuailei-core/v2/db"
@@ -66,7 +66,7 @@ func Parse(ctx context.Context, in *ParseRequest) (*ParseResponse, error) {
 		}, err
 	}
 	if in.ConfigPath != "" {
-		err = os.WriteFile(in.ConfigPath, config, 0o644)
+		err = configvault.WriteFile(in.ConfigPath, config)
 		if err != nil {
 			return &ParseResponse{
 				ResponseCode: hcommon.ResponseCode_FAILED,
