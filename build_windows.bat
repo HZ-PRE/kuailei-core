@@ -6,7 +6,7 @@ set CGO_ENABLED=1
 go run ./cli tunnel exit
 del bin\sdm-core.dll bin\SdmCli.exe
 set CGO_LDFLAGS=
-go build -trimpath -tags with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc -ldflags="-w -s" -buildmode=c-shared -o bin/sdm-core.dll ./platform/desktop
+go build -trimpath -tags with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc -ldflags="-w -s" -buildmode=c-shared -o bin/sdm-c.dll ./platform/desktop
 go get github.com/akavel/rsrc
 go install github.com/akavel/rsrc
 
