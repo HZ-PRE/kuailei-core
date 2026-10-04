@@ -564,6 +564,9 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 				DomainSuffix: []string{
 					"api.ip.sb",
 					"ipwho.is",
+					"api.ip.sb",
+					"ipinfo.io",
+					"geolocation-db.com",
 				},
 			},
 			RuleAction: option.RuleAction{
@@ -1143,7 +1146,6 @@ func appendUniqueRuleSets(base []option.RuleSet, additions []option.RuleSet) []o
 	}
 	return base
 }
-
 
 var (
 	ipMaps      = map[string][]string{}
