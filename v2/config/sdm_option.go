@@ -60,6 +60,7 @@ type InboundOptions struct {
 }
 
 type URLTestOptions struct {
+	EnableNodeIPInfo   bool              `json:"enable-node-ip-info,omitempty"`
 	ConnectionTestUrl  string            `json:"connection-test-url,omitempty" overridable:"true"`
 	ConnectionTestUrls []string          `json:"connection-test-urls,omitempty" overridable:"true"`
 	URLTestInterval    DurationInSeconds `json:"url-test-interval,omitempty" overridable:"true"`

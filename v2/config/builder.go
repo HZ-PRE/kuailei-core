@@ -40,8 +40,8 @@ const (
 	OutboundBypassTag = "bypass §hide§"
 	// OutboundBlockTag          = "block §hide§"
 	OutboundSelectTag         = "select"
-	OutboundURLTestTag        = "自动选择"
-	OutboundRoundRobinTag     = "极速模式"
+	OutboundRoundRobinTag     = "自动选择"
+	OutboundURLTestTag        = "极速模式"
 	OutboundDNSTag            = "dns-out §hide§"
 	OutboundDirectFragmentTag = "direct-fragment §hide§"
 
@@ -186,23 +186,6 @@ func setOutbounds(options *option.Options, input *option.Options, opt *SdmOption
 	// 		InterruptExistConnections: false,
 	// 	},
 	// }
-	urlTest := option.Outbound{
-		Type: C.TypeBalancer,
-		Tag:  OutboundURLTestTag,
-		Options: &option.BalancerOutboundOptions{
-			Outbounds:            tags,
-			Strategy:             "lowest-delay",
-			DelayAcceptableRatio: 2,
-			// URL:       opt.ConnectionTestUrl,
-			// URLs:      opt.ConnectionTestUrls,
-			// Interval:  badoption.Duration(opt.URLTestInterval.Duration()),
-			// IdleTimeout: badoption.Duration(opt.URLTestIdleTimeout.Duration()),
-			Tolerance: 1,
-			// IdleTimeout:               badoption.Duration(opt.URLTestInterval.Duration().Nanoseconds() * 3),
-			InterruptExistConnections: true,
-		},
-	}
-
 	balancer := option.Outbound{
 		Type: C.TypeBalancer,
 		Tag:  OutboundRoundRobinTag,
@@ -214,7 +197,21 @@ func setOutbounds(options *option.Options, input *option.Options, opt *SdmOption
 			// URLs:      opt.ConnectionTestUrls,
 			// Interval:  badoption.Duration(opt.URLTestInterval.Duration()),
 			// IdleTimeout: badoption.Duration(opt.URLTestIdleTimeout.Duration()),
-			Tolerance: 1,
+			// IdleTimeout:               badoption.Duration(opt.URLTestInterval.Duration().Nanoseconds() * 3),
+			InterruptExistConnections: true,
+		},
+	}
+	urlTest := option.Outbound{
+		Type: C.TypeBalancer,
+		Tag:  OutboundURLTestTag,
+		Options: &option.BalancerOutboundOptions{
+			Outbounds:            tags,
+			Strategy:             "lowest-delay",
+			DelayAcceptableRatio: 2,
+			// URL:       opt.ConnectionTestUrl,
+			// URLs:      opt.ConnectionTestUrls,
+			// Interval:  badoption.Duration(opt.URLTestInterval.Duration()),
+			// IdleTimeout: badoption.Duration(opt.URLTestIdleTimeout.Duration()),
 			// IdleTimeout:               badoption.Duration(opt.URLTestInterval.Duration().Nanoseconds() * 3),
 			InterruptExistConnections: true,
 		},
@@ -233,13 +230,13 @@ func setOutbounds(options *option.Options, input *option.Options, opt *SdmOption
 	selectorTags := tags
 	if len(tags) > 1 {
 		if OutboundMainDetour == WARPConfigTag {
-			outbounds = append([]option.Outbound{urlTest}, outbounds...)
-			selectorTags = append([]string{urlTest.Tag}, selectorTags...)
-			defaultSelect = urlTest.Tag
+			outbounds = append([]option.Outbound{balancer}, outbounds...)
+			selectorTags = append([]string{balancer.Tag}, selectorTags...)
+			defaultSelect = balancer.Tag
 		} else {
-			outbounds = append([]option.Outbound{urlTest, balancer}, outbounds...)
-			selectorTags = append([]string{urlTest.Tag, balancer.Tag}, selectorTags...)
-			defaultSelect = urlTest.Tag
+			outbounds = append([]option.Outbound{balancer, urlTest}, outbounds...)
+			selectorTags = append([]string{balancer.Tag, urlTest.Tag}, selectorTags...)
+			defaultSelect = balancer.Tag
 
 		}
 	}
@@ -328,10 +325,11 @@ func setExperimental(options *option.Options, hopt *SdmOptions) {
 			},
 
 			Monitoring: &option.MonitoringOptions{
-				URLs:           hopt.ConnectionTestUrls,
-				Interval:       badoption.Duration(hopt.URLTestInterval.Duration()),
-				DebounceWindow: badoption.Duration(time.Millisecond * 500),
-				IdleTimeout:    badoption.Duration(hopt.URLTestInterval.Duration().Nanoseconds() * 3),
+				EnableNodeIPInfo: hopt.EnableNodeIPInfo,
+				URLs:             hopt.ConnectionTestUrls,
+				Interval:         badoption.Duration(hopt.URLTestInterval.Duration()),
+				DebounceWindow:   badoption.Duration(time.Millisecond * 500),
+				IdleTimeout:      badoption.Duration(hopt.URLTestInterval.Duration().Nanoseconds() * 3),
 			},
 		}
 	}

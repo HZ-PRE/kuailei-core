@@ -9,6 +9,7 @@ import (
 	"github.com/HZ-PRE/kuailei-core/v2/db"
 	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	hutils "github.com/HZ-PRE/kuailei-core/v2/hutils"
+	"github.com/sagernet/sing-box/common/monitoring"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/option"
@@ -133,6 +134,11 @@ func ChangeSdmSettings(in *ChangeSdmSettingsRequest, insert bool) (*CoreInfoResp
 		err := json.Unmarshal([]byte(static.SdmOptions.Warp2.WireguardConfigStr), &static.SdmOptions.Warp2.WireguardConfig)
 		if err != nil {
 			return nil, err
+		}
+	}
+	if ctx := static.Context(); ctx != nil {
+		if monitor := monitoring.Get(ctx); monitor != nil {
+			monitor.SetNodeIPInfoEnabled(static.SdmOptions.EnableNodeIPInfo)
 		}
 	}
 	return &CoreInfoResponse{}, nil

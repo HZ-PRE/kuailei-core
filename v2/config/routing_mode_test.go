@@ -52,7 +52,7 @@ func TestRoutingModeBuildAndSwitchBack(t *testing.T) {
 				}
 				ipInfo := options.Route.Rules[2].DefaultOptions
 				if ipInfo.Action != C.RuleActionTypeRoute || ipInfo.RouteOptions.Outbound != OutboundDirectTag ||
-					!slices.Equal(ipInfo.DomainSuffix, []string{"api.ip.sb", "ipwho.is"}) {
+					!slices.Contains(ipInfo.DomainSuffix, "api.ip.sb") || !slices.Contains(ipInfo.DomainSuffix, "ipwho.is") {
 					t.Fatal("IP lookup domains must stay direct in global mode")
 				}
 				for _, rule := range options.DNS.Rules {

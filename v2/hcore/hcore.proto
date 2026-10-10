@@ -105,6 +105,7 @@ message OutboundInfo {
   int64 upload = 15;
   int64 download = 16;
   string detour = 17;
+  string country_code = 18;
 }
 
 message IpInfo {
@@ -229,7 +230,6 @@ message LogRequest {
 
 message StopRequest{
 }
-
 
 
 

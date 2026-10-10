@@ -130,6 +130,14 @@ func StartService(ctx context.Context, in *StartRequest) (coreResponse *CoreInfo
 		<-time.After(1000 * time.Millisecond)
 	}
 	libbox.SetMemoryLimit(C.IsIos || !in.DisableMemoryLimit)
+	if static.debug {
+		content, dumpErr := options.MarshalJSONContext(ctx)
+		if dumpErr != nil {
+			Log(LogLevel_DEBUG, LogType_CORE, "配置序列化失败：", dumpErr)
+		} else {
+			Log(LogLevel_DEBUG, LogType_CORE, "启动配置：", string(content))
+		}
+	}
 	instance, err := NewService(ctx, *options)
 	if err != nil {
 		return errorWrapper(MessageType_START_SERVICE, err)
