@@ -3,6 +3,7 @@ package hcore
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/HZ-PRE/kuailei-core/v2/config"
@@ -14,7 +15,7 @@ import (
 
 type SdmInstance struct {
 	StartedService *daemon.StartedService
-	SdmOptions *config.SdmOptions
+	SdmOptions     *config.SdmOptions
 	// activeConfigPath string
 	CoreLogFactory            log.Factory
 	coreInfoObserver          *monitoring.Broadcaster[*CoreInfoResponse]
@@ -26,6 +27,7 @@ type SdmInstance struct {
 	lock                      sync.Mutex
 	globalPlatformInterface   libbox.PlatformInterface
 	previousStartRequest      *StartRequest
+	currentProfile            atomic.Pointer[string]
 	debug                     bool
 	ListenPort                uint16
 	BaseContext               context.Context

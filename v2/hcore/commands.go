@@ -7,21 +7,20 @@ import (
 	"time"
 
 	"github.com/HZ-PRE/kuailei-core/v2/config"
-	"github.com/HZ-PRE/kuailei-core/v2/db"
 	hcommon "github.com/HZ-PRE/kuailei-core/v2/hcommon"
 	"github.com/sagernet/sing-box/adapter"
 	// "github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/protocol/group"
 
+	"github.com/sagernet/sing-box/common/memorystats"
 	"github.com/sagernet/sing-box/common/monitoring"
 	E "github.com/sagernet/sing/common/exceptions"
-	"github.com/sagernet/sing/common/memory"
 	"google.golang.org/grpc"
 )
 
 func (h *SdmInstance) readStatus(prev *SystemInfo) *SystemInfo {
 	var message SystemInfo
-	message.Memory = int64(memory.Inuse())
+	message.Memory = int64(memorystats.Inuse())
 	message.Goroutines = int32(runtime.NumGoroutine())
 	// message.ConnectionsOut = int32(conntrack.Count())
 
@@ -55,14 +54,8 @@ func (h *SdmInstance) readStatus(prev *SystemInfo) *SystemInfo {
 			// }
 		}
 
-		if prev == nil || prev.CurrentProfile == "" || message.UplinkTotal < 1000000 {
-			settings := db.GetTable[hcommon.AppSettings]()
-			lastName, err := settings.Get("lastStartRequestName")
-			if err == nil {
-				message.CurrentProfile = lastName.Value.(string)
-			}
-		} else {
-			message.CurrentProfile = prev.CurrentProfile
+		if name := h.currentProfile.Load(); name != nil {
+			message.CurrentProfile = *name
 		}
 	}
 

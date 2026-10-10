@@ -122,7 +122,6 @@ require (
 )
 
 require (
-	github.com/quic-go/quic-go v0.59.0
 	github.com/sagernet/sing-box v1.13.0
 	github.com/sdm/ray2sing v0.0.0-20260209214534-63c82f8c23a6
 	github.com/showwin/speedtest-go v1.7.10

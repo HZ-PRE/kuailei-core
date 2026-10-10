@@ -58,9 +58,10 @@ func Setup(params *SetupRequest, platformInterface libbox.PlatformInterface) (se
 	tcpConn := true // runtime.GOOS == "windows" // TODO add TVOS
 	libbox.Setup(
 		&libbox.SetupOptions{
-			BasePath:    params.BasePath,
-			WorkingPath: params.WorkingDir,
-			TempPath:    params.TempDir,
+			OomMemoryLimit: coreMemoryBudget(),
+			BasePath:       params.BasePath,
+			WorkingPath:    params.WorkingDir,
+			TempPath:       params.TempDir,
 			// IsTVOS:          !tcpConn,
 			FixAndroidStack: params.FixAndroidStack,
 			LogMaxLines:     100,

@@ -143,6 +143,8 @@ func StartService(ctx context.Context, in *StartRequest) (coreResponse *CoreInfo
 		return errorWrapper(MessageType_START_SERVICE, err)
 	}
 	static.StartedService = instance
+	profileName := in.ConfigName
+	static.currentProfile.Store(&profileName)
 	if static.debug {
 		dumpGoroutinesToFile(fmt.Sprint(sWorkingPath, "/data/goroutine-start.log"))
 	}

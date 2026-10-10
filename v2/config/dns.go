@@ -104,7 +104,10 @@ func setDns(options *option.Options, opt *SdmOptions, staticIps *map[string][]st
 		RawDNSOptions: option.RawDNSOptions{
 			DNSClientOptions: option.DNSClientOptions{
 				IndependentCache: opt.IndependentDNSCache && !C.IsIos,
-				DisableExpire:    true,
+				Optimistic: &option.OptimisticDNSOptions{
+					Enabled: true,
+					Timeout: badoption.Duration(5 * time.Minute),
+				},
 			},
 			Final: DNSMultiRemoteTag,
 
