@@ -4,11 +4,8 @@ import (
 	context "context"
 	"fmt"
 	"github.com/HZ-PRE/kuailei-core/v2/configvault"
-	"log"
-	"net"
 
 	"github.com/sagernet/sing-box/experimental/libbox"
-	"google.golang.org/grpc"
 )
 
 type server struct {
@@ -56,20 +53,5 @@ func (s *server) GenerateFullConfig(ctx context.Context, in *GenerateConfigReque
 }
 
 func StartGRPCServer(port uint16) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
-
-	s := grpc.NewServer()
-	RegisterCoreServiceServer(s, &server{})
-
-	log.Println("Server started on :", port)
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
-		}
-	}()
-
-	return nil
+	return fmt.Errorf("legacy unauthenticated config RPC is disabled; use the authenticated core RPC")
 }

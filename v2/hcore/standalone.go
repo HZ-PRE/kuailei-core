@@ -2,6 +2,7 @@ package hcore
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,8 +16,6 @@ import (
 	"time"
 
 	"github.com/HZ-PRE/kuailei-core/v2/config"
-
-	"github.com/sagernet/sing-box/option"
 )
 
 func RunStandalone(ctx context.Context, sdmSettingPath string, configPath string, defaultConfig config.SdmOptions) error {
@@ -51,9 +50,9 @@ func RunStandalone(ctx context.Context, sdmSettingPath string, configPath string
 }
 
 type ConfigResult struct {
-	Config                string
-	RefreshInterval       int
-	SdmSdmOptions *config.SdmOptions
+	Config          string
+	RefreshInterval int
+	SdmSdmOptions   *config.SdmOptions
 }
 
 func readAndBuildConfig(ctx context.Context, sdmSettingPath string, configPath string, defaultConfig *config.SdmOptions) (ConfigResult, error) {
@@ -162,19 +161,11 @@ func buildStandaloneConfig(ctx context.Context, ropt *config.ReadOptions, hopts 
 	}
 
 	finalconfig.Log.Output = ""
-	finalconfig.Experimental = &option.ExperimentalOptions{
-		ClashAPI: &option.ClashAPIOptions{
-			ExternalUI: "webui",
-		},
+	// Preserve the loopback address and secret produced by the config builder.
+	if finalconfig.Experimental != nil && finalconfig.Experimental.ClashAPI != nil {
+		finalconfig.Experimental.ClashAPI.ExternalUI = "webui"
+		fmt.Printf("Local management UI: http://%s/ui/ (authentication required)\n", finalconfig.Experimental.ClashAPI.ExternalController)
 	}
-	// finalconfig.Experimental.ClashAPI.ExternalUI = "webui"
-	if hopts.AllowConnectionFromLAN {
-		finalconfig.Experimental.ClashAPI.ExternalController = "0.0.0.0:16756"
-	} else {
-		finalconfig.Experimental.ClashAPI.ExternalController = "127.0.0.1:16756"
-	}
-
-	fmt.Printf("Open http://localhost:6756/ui/?secret=%s in your browser\n", finalconfig.Experimental.ClashAPI.Secret)
 
 	if err := Setup(
 		&SetupRequest{
@@ -184,6 +175,7 @@ func buildStandaloneConfig(ctx context.Context, ropt *config.ReadOptions, hopts 
 			FlutterStatusPort: 0,
 			Debug:             false,
 			Listen:            "127.0.0.1:17078",
+			Secret:            rand.Text(),
 			Mode:              SetupMode_GRPC_NORMAL_INSECURE,
 		}, nil); err != nil {
 		return "", fmt.Errorf("failed to set up global configuration: %w", err)

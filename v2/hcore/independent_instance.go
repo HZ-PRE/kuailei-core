@@ -42,6 +42,8 @@ func RunInstance(ctx context.Context, sdmSettings *config.SdmOptions, singconfig
 	}
 	sdmSettings.EnableClashApi = false
 	sdmSettings.InboundOptions.MixedPort = getRandomAvailblePort()
+	enableMixed := true
+	sdmSettings.InboundOptions.EnableMixedPort = &enableMixed
 	sdmSettings.InboundOptions.EnableTun = false
 	sdmSettings.InboundOptions.EnableTunService = false
 	sdmSettings.InboundOptions.SetSystemProxy = false

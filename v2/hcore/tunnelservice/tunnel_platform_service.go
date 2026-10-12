@@ -3,7 +3,6 @@ package tunnelservice
 import (
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
 
@@ -20,24 +19,7 @@ type sdmNext struct {
 var port int = 18020
 
 func (m *sdmNext) StartTunnelGrpcServer(listenAddressG string) (*grpc.Server, error) {
-	lis, err := net.Listen("tcp", listenAddressG)
-	if err != nil {
-		log.Printf("failed to listen: %v", err)
-		return nil, err
-	}
-	s := grpc.NewServer()
-	m.tunnelService = &TunnelService{}
-	RegisterTunnelServiceServer(s, m.tunnelService)
-
-	log.Printf("Server listening on %s", listenAddressG)
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			log.Printf("failed to serve: %v", err)
-		}
-		log.Printf("Server stopped")
-		// cancel()
-	}()
-	return s, nil
+	return nil, fmt.Errorf("legacy unauthenticated tunnel RPC is disabled; use the app's built-in TUN mode")
 }
 
 func (m *sdmNext) Start(s service.Service) error {
@@ -46,6 +28,9 @@ func (m *sdmNext) Start(s service.Service) error {
 }
 
 func (m *sdmNext) Stop(s service.Service) error {
+	if m.tunnelService == nil {
+		return nil
+	}
 	_, err := m.tunnelService.Stop(nil, nil)
 	if err != nil {
 		return nil
@@ -68,6 +53,10 @@ func getCurrentExecutableDirectory() string {
 }
 
 func StartTunnelService(goArg string) (int, string) {
+	// Keep OS-level cleanup available, but never install or run the old RPC.
+	if goArg != "stop" && goArg != "uninstall" {
+		return 1, "legacy tunnel service is disabled; use the app's built-in TUN mode"
+	}
 	svcConfig := &service.Config{
 		Name:        "SdmTunnelService",
 		DisplayName: "Sdm Tunnel Service",

@@ -2,10 +2,10 @@ package config
 
 import (
 	context "context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"net"
 	"net/netip"
 	"net/url"
@@ -78,10 +78,14 @@ func BuildConfig(ctx context.Context, hopts *SdmOptions, inputOpt *ReadOptions) 
 		options.Route = input.Route
 	}
 
-	setExperimental(&options, hopts)
+	if err := setExperimental(&options, hopts); err != nil {
+		return nil, err
+	}
 
 	setLog(&options, hopts)
-	setInbound(&options, hopts)
+	if err := setInbound(&options, hopts); err != nil {
+		return nil, err
+	}
 	staticIPs := make(map[string][]string)
 	// staticIPs["api.cloudflareclient.com"] = []string{"104.16.192.82", "2606:4700::6810:1854", getRandomWarpIP()}
 	// setNTP(&options)
@@ -298,7 +302,7 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-func setExperimental(options *option.Options, hopt *SdmOptions) {
+func setExperimental(options *option.Options, hopt *SdmOptions) error {
 	if len(hopt.ConnectionTestUrls) == 0 {
 		hopt.ConnectionTestUrls = []string{hopt.ConnectionTestUrl, "http://captive.apple.com/generate_204", "https://cp.cloudflare.com", "https://google.com/generate_204"}
 		if isBlockedConnectionTestUrl(hopt.ConnectionTestUrl) {
@@ -307,7 +311,14 @@ func setExperimental(options *option.Options, hopt *SdmOptions) {
 	}
 	if hopt.EnableClashApi {
 		if hopt.ClashApiSecret == "" {
-			hopt.ClashApiSecret = generateRandomString(16)
+			secret, err := generateRandomString(32)
+			if err != nil {
+				return fmt.Errorf("generate Clash API secret: %w", err)
+			}
+			hopt.ClashApiSecret = secret
+		}
+		if len(hopt.ClashApiSecret) < 16 {
+			return fmt.Errorf("Clash API secret must contain at least 16 bytes, or be omitted for automatic generation")
 		}
 		options.Experimental = &option.ExperimentalOptions{
 			UnifiedDelay: &option.UnifiedDelayOptions{
@@ -333,6 +344,7 @@ func setExperimental(options *option.Options, hopt *SdmOptions) {
 			},
 		}
 	}
+	return nil
 }
 
 func setLog(options *option.Options, opt *SdmOptions) {
@@ -351,7 +363,21 @@ func isIPv6Supported() bool {
 	_, err := net.ResolveIPAddr("ip6", "::1")
 	return err == nil
 }
-func setInbound(options *option.Options, hopt *SdmOptions) {
+func portEnabled(value *bool, fallback bool) bool {
+	if value == nil {
+		return fallback
+	}
+	return *value
+}
+
+func setInbound(options *option.Options, hopt *SdmOptions) error {
+	if hopt.AllowConnectionFromLAN {
+		return fmt.Errorf("LAN sharing is disabled; local inbounds must use loopback addresses")
+	}
+	mixedEnabled := portEnabled(hopt.EnableMixedPort, !hopt.EnableTun) && hopt.MixedPort > 0
+	if hopt.SetSystemProxy && !mixedEnabled {
+		return fmt.Errorf("system proxy mode requires an enabled mixed port; use TUN mode to disable it")
+	}
 	// var inboundDomainStrategy option.DomainStrategy
 	// if !opt.ResolveDestination {
 	// 	inboundDomainStrategy = option.DomainStrategy(dns.DomainStrategyAsIS)
@@ -400,42 +426,36 @@ func setInbound(options *option.Options, hopt *SdmOptions) {
 
 	binds := []string{}
 
-	if hopt.AllowConnectionFromLAN {
-		if ipv6Enable {
-			binds = append(binds, "::")
-		} else {
-			binds = append(binds, "0.0.0.0")
-		}
-	} else {
-		if ipv6Enable {
-			binds = append(binds, "::1")
-		}
-		binds = append(binds, "127.0.0.1")
+	if ipv6Enable {
+		binds = append(binds, "::1")
 	}
+	binds = append(binds, "127.0.0.1")
 
 	for _, bind := range binds {
 		addr := badoption.Addr(netip.MustParseAddr(bind))
 
-		options.Inbounds = append(
-			options.Inbounds,
-			option.Inbound{
-				Type: C.TypeMixed,
-				Tag:  InboundMixedTag + bind,
-				Options: &option.HTTPMixedInboundOptions{
-					ListenOptions: option.ListenOptions{
-						Listen:     &addr,
-						ListenPort: hopt.MixedPort,
-						// InboundOptions: option.InboundOptions{
-						// 	SniffEnabled:             true,
-						// 	SniffOverrideDestination: true,
-						// 	DomainStrategy:           inboundDomainStrategy,
-						// },
+		if mixedEnabled {
+			options.Inbounds = append(
+				options.Inbounds,
+				option.Inbound{
+					Type: C.TypeMixed,
+					Tag:  InboundMixedTag + bind,
+					Options: &option.HTTPMixedInboundOptions{
+						ListenOptions: option.ListenOptions{
+							Listen:     &addr,
+							ListenPort: hopt.MixedPort,
+							// InboundOptions: option.InboundOptions{
+							// 	SniffEnabled:             true,
+							// 	SniffOverrideDestination: true,
+							// 	DomainStrategy:           inboundDomainStrategy,
+							// },
+						},
+						SetSystemProxy: hopt.SetSystemProxy,
 					},
-					SetSystemProxy: hopt.SetSystemProxy,
 				},
-			},
-		)
-		if C.IsLinux && !C.IsAndroid && hopt.TProxyPort > 0 && hutils.IsAdmin() {
+			)
+		}
+		if portEnabled(hopt.EnableTProxyPort, false) && C.IsLinux && !C.IsAndroid && hopt.TProxyPort > 0 && hutils.IsAdmin() {
 			options.Inbounds = append(
 				options.Inbounds,
 				option.Inbound{
@@ -450,7 +470,7 @@ func setInbound(options *option.Options, hopt *SdmOptions) {
 				},
 			)
 		}
-		if (C.IsLinux || C.IsDarwin) && !C.IsAndroid && hopt.RedirectPort > 0 {
+		if portEnabled(hopt.EnableRedirectPort, false) && (C.IsLinux || C.IsDarwin) && !C.IsAndroid && hopt.RedirectPort > 0 {
 			options.Inbounds = append(
 				options.Inbounds,
 				option.Inbound{
@@ -465,7 +485,7 @@ func setInbound(options *option.Options, hopt *SdmOptions) {
 				},
 			)
 		}
-		if hopt.DirectPort > 0 {
+		if portEnabled(hopt.EnableDirectPort, false) && hopt.DirectPort > 0 {
 			options.Inbounds = append(
 				options.Inbounds,
 				option.Inbound{
@@ -481,6 +501,7 @@ func setInbound(options *option.Options, hopt *SdmOptions) {
 			)
 		}
 	}
+	return nil
 }
 
 func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *option.RouteOptions) error {
@@ -1234,7 +1255,7 @@ func removeDuplicateStr(strSlice []string) []string {
 	return list
 }
 
-func generateRandomString(length int) string {
+func generateRandomString(length int) (string, error) {
 	// Determine the number of bytes needed
 	bytesNeeded := (length*6 + 7) / 8
 
@@ -1242,12 +1263,12 @@ func generateRandomString(length int) string {
 	randomBytes := make([]byte, bytesNeeded)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		return "sdm"
+		return "", err
 	}
 
 	// Encode random bytes to base64
 	randomString := base64.URLEncoding.EncodeToString(randomBytes)
 
 	// Trim padding characters and return the string
-	return randomString[:length]
+	return randomString[:length], nil
 }

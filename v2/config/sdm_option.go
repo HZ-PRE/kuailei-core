@@ -47,16 +47,21 @@ type DNSOptions struct {
 }
 
 type InboundOptions struct {
-	EnableTun        bool   `json:"enable-tun,omitempty"`
-	EnableTunService bool   `json:"enable-tun-service,omitempty"`
-	SetSystemProxy   bool   `json:"set-system-proxy,omitempty"`
-	MixedPort        uint16 `json:"mixed-port,omitempty"`
-	TProxyPort       uint16 `json:"tproxy-port,omitempty"`
-	RedirectPort     uint16 `json:"redirect-port,omitempty"`
-	DirectPort       uint16 `json:"direct-port,omitempty"`
-	MTU              uint32 `json:"mtu,omitempty"`
-	StrictRoute      bool   `json:"strict-route,omitempty"`
-	TUNStack         string `json:"tun-implementation,omitempty"`
+	// Pointers distinguish an explicit disabled port from an omitted legacy field.
+	EnableMixedPort    *bool  `json:"enable-mixed-port,omitempty"`
+	EnableTProxyPort   *bool  `json:"enable-tproxy-port,omitempty"`
+	EnableRedirectPort *bool  `json:"enable-redirect-port,omitempty"`
+	EnableDirectPort   *bool  `json:"enable-direct-port,omitempty"`
+	EnableTun          bool   `json:"enable-tun,omitempty"`
+	EnableTunService   bool   `json:"enable-tun-service,omitempty"`
+	SetSystemProxy     bool   `json:"set-system-proxy,omitempty"`
+	MixedPort          uint16 `json:"mixed-port,omitempty"`
+	TProxyPort         uint16 `json:"tproxy-port,omitempty"`
+	RedirectPort       uint16 `json:"redirect-port,omitempty"`
+	DirectPort         uint16 `json:"direct-port,omitempty"`
+	MTU                uint32 `json:"mtu,omitempty"`
+	StrictRoute        bool   `json:"strict-route,omitempty"`
+	TUNStack           string `json:"tun-implementation,omitempty"`
 }
 
 type URLTestOptions struct {
