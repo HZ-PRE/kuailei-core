@@ -1,6 +1,6 @@
 module github.com/sdm/hmrd_multi_resolver_dns
 
-go 1.25.6
+go 1.27
 
 require (
 	github.com/miekg/dns v1.1.72 // indirect

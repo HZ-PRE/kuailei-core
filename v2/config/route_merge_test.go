@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"slices"
 	"testing"
 
@@ -11,26 +13,24 @@ import (
 )
 
 func TestSelectBuildInputSectionsKeepsRouteRules(t *testing.T) {
-	input := map[string]interface{}{
-		"log":       map[string]interface{}{"level": "debug"},
-		"outbounds": []interface{}{map[string]interface{}{"type": "direct", "tag": "proxy"}},
-		"route": map[string]interface{}{
-			"rules":    []interface{}{map[string]interface{}{"domain": []interface{}{"profile.example"}}},
-			"rule_set": []interface{}{map[string]interface{}{"type": "remote", "tag": "profile-set"}},
-			"final":    "proxy",
-		},
+	input := map[string]jsontext.Value{
+		"log":       []byte(`{"level":"debug"}`),
+		"outbounds": []byte(`[{"type":"direct","tag":"proxy"}]`),
+		"route":     []byte(`{"rules":[{"domain":["profile.example"]}],"rule_set":[{"type":"remote","tag":"profile-set"}],"final":"proxy"}`),
 	}
-
-	selected := selectBuildInputSections(input)
+	selected, err := selectBuildInputSections(input)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, exists := selected["log"]; exists {
-		t.Fatal("unrelated full-config section should not be retained")
+		t.Fatal("unrelated full-config section retained")
 	}
-	route, ok := selected["route"].(map[string]interface{})
-	if !ok {
-		t.Fatal("route section was not retained")
+	var route map[string]jsontext.Value
+	if err := json.Unmarshal(selected["route"], &route); err != nil {
+		t.Fatal(err)
 	}
 	if route["rules"] == nil || route["rule_set"] == nil {
-		t.Fatalf("route rules or rule sets were not retained: %#v", route)
+		t.Fatal("route rules lost")
 	}
 	if _, exists := route["final"]; exists {
 		t.Fatal("route.final should continue to be managed by the app")

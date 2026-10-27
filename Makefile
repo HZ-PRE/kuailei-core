@@ -28,8 +28,8 @@ protos:
 
 
 lib_install: prepare
-	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.11
-	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.11
+	go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+	go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.13
 	npm install
 
 headers:
@@ -152,9 +152,9 @@ linux-custom: prepare  install_cronet
 	make webui
 
 macos-amd64:
-	env GOOS=darwin GOARCH=amd64 CGO_CFLAGS="-mmacosx-version-min=10.11 -O2" CGO_LDFLAGS="-mmacosx-version-min=10.11 -O2 -lpthread" CGO_ENABLED=1 go build -trimpath -tags $(TAGS),$(MACOS_ADD_TAGS) -buildmode=c-shared -o $(BINDIR)/$(LIBNAME)-amd64.dylib ./platform/desktop
+	env GOOS=darwin GOARCH=amd64 CGO_CFLAGS="-mmacosx-version-min=13.0 -O2" CGO_LDFLAGS="-mmacosx-version-min=13.0 -O2 -lpthread" CGO_ENABLED=1 go build -trimpath -tags $(TAGS),$(MACOS_ADD_TAGS) -buildmode=c-shared -o $(BINDIR)/$(LIBNAME)-amd64.dylib ./platform/desktop
 macos-arm64:
-	env GOOS=darwin GOARCH=arm64 CGO_CFLAGS="-mmacosx-version-min=10.11 -O2" CGO_LDFLAGS="-mmacosx-version-min=10.11 -O2 -lpthread" CGO_ENABLED=1 go build -trimpath -tags $(TAGS),$(MACOS_ADD_TAGS) -buildmode=c-shared -o $(BINDIR)/$(LIBNAME)-arm64.dylib ./platform/desktop
+	env GOOS=darwin GOARCH=arm64 CGO_CFLAGS="-mmacosx-version-min=13.0 -O2" CGO_LDFLAGS="-mmacosx-version-min=13.0 -O2 -lpthread" CGO_ENABLED=1 go build -trimpath -tags $(TAGS),$(MACOS_ADD_TAGS) -buildmode=c-shared -o $(BINDIR)/$(LIBNAME)-arm64.dylib ./platform/desktop
 	
 macos: prepare macos-amd64 macos-arm64 
 	

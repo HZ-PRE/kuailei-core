@@ -5,8 +5,27 @@ Sdm uses [Go](https://go.dev), make sure that you have the correct version insta
 $ go version
 
 # example response
-go version go1.21.1 darwin/arm64
+go version go1.27.3 darwin/arm64
 ```
+
+The modules require Go 1.27 or newer. Release builds currently use Go 1.27.3,
+Garble v0.18.0, and SagerNet gomobile/gobind v0.1.13. Upgrade Go and Garble
+together: Garble patches the compiler/linker and only supports specific Go
+versions. The Flutter project's `scripts/core_obfuscation.ps1` pins this pair;
+its Windows and Android builds use a separate toolchain and cache.
+
+From the Flutter project root, rebuild the bundled obfuscated cores with:
+
+```powershell
+./scripts/build_protocol_core.ps1 -Platform windows
+./scripts/build_protocol_core.ps1 -Platform android
+```
+
+These commands update the DLL in `windows/libs` and the AAR in
+`android/app/libs`, along with build metadata in `sdm-core/bin`. They do not
+rebuild the Flutter application packages. Android builds require the Android
+SDK, NDK, and a JDK. Validate stored-data compatibility and the exported FFI/JNI
+interfaces when changing the obfuscation toolchain.
 
 ### Working with the Go Code
 

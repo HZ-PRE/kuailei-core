@@ -1,6 +1,6 @@
 module github.com/HZ-PRE/ray2sing
 
-go 1.25.6
+go 1.27
 
 require (
 	github.com/sagernet/sing v0.8.11-0.20260514110501-905ad103a4df

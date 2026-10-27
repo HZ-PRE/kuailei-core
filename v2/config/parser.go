@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
-	"github.com/HZ-PRE/kuailei-core/v2/configvault"
+	"io"
 
+	"github.com/HZ-PRE/kuailei-core/v2/configvault"
 	"github.com/sagernet/sing-box/experimental/libbox"
 	"github.com/sagernet/sing-box/option"
 	SJ "github.com/sagernet/sing/common/json"
@@ -27,7 +29,7 @@ func ReadContent(ctx context.Context, opt *ReadOptions) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		opt.Content = string(contentBytes)
+		return contentBytes, nil
 	}
 	return []byte(opt.Content), nil
 }
@@ -55,37 +57,22 @@ func parseConfigContent(ctx context.Context, content []byte, debug bool, configO
 		configOpt = DefaultSdmOptions()
 	}
 
-	var jsonObj map[string]interface{} = make(map[string]interface{})
-
-	var tmpJsonResult any
-	jsonDecoder := json.NewDecoder(SJ.NewCommentFilter(bytes.NewReader(content)))
-	if err := jsonDecoder.Decode(&tmpJsonResult); err == nil {
-		fmt.Printf("Convert using json\n")
-		if tmpJsonObj, ok := tmpJsonResult.(map[string]interface{}); ok {
-			if tmpJsonObj["outbounds"] == nil && tmpJsonObj["endpoints"] == nil {
-				jsonObj["outbounds"] = []interface{}{tmpJsonObj}
-			} else {
-				if fullConfig || (configOpt != nil && configOpt.EnableFullConfig) {
-					jsonObj = tmpJsonObj
-				} else {
-					jsonObj = selectBuildInputSections(tmpJsonObj)
-				}
-			}
-		} else if jsonArray, ok := tmpJsonResult.([]interface{}); ok {
-			jsonObj["outbounds"] = jsonArray
-		} else {
-			return nil, fmt.Errorf("[SingboxParser] Incorrect Json Format")
-		}
-
-		newContent, err := json.MarshalIndent(jsonObj, "", "  ")
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	decoder := jsontext.NewDecoder(SJ.NewCommentFilter(bytes.NewReader(content)))
+	kind := decoder.PeekKind()
+	if kind == '{' || kind == '[' {
+		normalized, err := normalizeJSONConfig(decoder, fullConfig || configOpt.EnableFullConfig)
 		if err != nil {
-			return nil, fmt.Errorf("[SingboxParser] encode config: %w", err)
+			return nil, fmt.Errorf("[SingboxParser] invalid JSON: %w", err)
 		}
-
-		return patchConfigStr(ctx, newContent, "SingboxParser", configOpt)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return patchConfigStr(ctx, normalized, "SingboxParser", configOpt)
 	}
 
-	fmt.Printf("Convert using clash\n")
 	clashObj := clash.Clash{}
 	if err := yaml.Unmarshal(content, &clashObj); err == nil && clashObj.Proxies != nil {
 		if len(clashObj.Proxies) == 0 {
@@ -111,28 +98,85 @@ func parseConfigContent(ctx context.Context, content []byte, debug bool, configO
 	return nil, fmt.Errorf("unable to determine config format")
 }
 
-func selectBuildInputSections(input map[string]interface{}) map[string]interface{} {
-	selected := make(map[string]interface{})
+// Preserve raw section values: node objects are decoded into typed options only
+// once, and large integers never round-trip through float64. jsontext rejects
+// duplicate names and invalid UTF-8, including inside discarded sections.
+func normalizeJSONConfig(decoder *jsontext.Decoder, full bool) ([]byte, error) {
+	var result []byte
+	switch decoder.PeekKind() {
+	case '[':
+		value, err := decoder.ReadValue()
+		if err != nil {
+			return nil, err
+		}
+		result = append([]byte(`{"outbounds":`), value...)
+		result = append(result, '}')
+	case '{':
+		var sections map[string]jsontext.Value
+		if err := json.UnmarshalDecode(decoder, &sections); err != nil {
+			return nil, err
+		}
+		if sections["outbounds"] == nil && sections["endpoints"] == nil {
+			outbound, err := json.Marshal(sections)
+			if err != nil {
+				return nil, err
+			}
+			result = append([]byte(`{"outbounds":[`), outbound...)
+			result = append(result, ']', '}')
+		} else {
+			if !full {
+				var err error
+				sections, err = selectBuildInputSections(sections)
+				if err != nil {
+					return nil, err
+				}
+			}
+			var err error
+			result, err = json.Marshal(sections)
+			if err != nil {
+				return nil, err
+			}
+		}
+	default:
+		return nil, fmt.Errorf("expected a JSON object or array")
+	}
+	if _, err := decoder.ReadToken(); err != io.EOF {
+		if err == nil {
+			err = fmt.Errorf("multiple JSON values")
+		}
+		return nil, err
+	}
+	return result, nil
+}
+
+func selectBuildInputSections(input map[string]jsontext.Value) (map[string]jsontext.Value, error) {
+	selected := make(map[string]jsontext.Value, 3)
 	for _, key := range []string{"outbounds", "endpoints"} {
 		if value, exists := input[key]; exists {
 			selected[key] = value
 		}
 	}
-
-	if route, ok := input["route"].(map[string]interface{}); ok {
-		selectedRoute := make(map[string]interface{})
+	if raw := input["route"]; len(raw) > 0 && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		var route map[string]jsontext.Value
+		if err := json.Unmarshal(raw, &route); err != nil {
+			return nil, fmt.Errorf("route: %w", err)
+		}
+		selectedRoute := make(map[string]jsontext.Value, 2)
 		for _, key := range []string{"rules", "rule_set"} {
 			if value, exists := route[key]; exists {
 				selectedRoute[key] = value
 			}
 		}
 		if len(selectedRoute) > 0 {
-			selected["route"] = selectedRoute
+			value, err := json.Marshal(selectedRoute)
+			if err != nil {
+				return nil, err
+			}
+			selected["route"] = value
 		}
 	}
-	return selected
+	return selected, nil
 }
-
 func patchConfigStr(ctx context.Context, content []byte, name string, configOpt *SdmOptions) (*option.Options, error) {
 	options := option.Options{}
 	err := options.UnmarshalJSONContext(ctx, content)
