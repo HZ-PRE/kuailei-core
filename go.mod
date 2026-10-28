@@ -6,6 +6,7 @@ require (
 	github.com/AdguardTeam/golibs v0.32.7 // indirect
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/ajg/form v1.5.1 // indirect
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/ameshkov/dnscrypt/v2 v2.4.0 // indirect
 	github.com/ameshkov/dnsstamps v1.0.3 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect

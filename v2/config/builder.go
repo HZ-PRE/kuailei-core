@@ -587,6 +587,7 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 					"ipinfo.io",
 					"geolocation-db.com",
 				},
+				IPCIDR: []string{"8.8.8.8/32", "1.1.1.1/32", "223.5.5.5/32", "114.114.114.114/32", "223.6.6.6/32", "119.29.29.29/32"},
 			},
 			RuleAction: option.RuleAction{
 				Action: C.RuleActionTypeRoute,
@@ -596,6 +597,25 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 			},
 		},
 	})
+	if hopt.BypassLAN {
+		routeRules = append(
+			routeRules,
+			option.Rule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultRule{
+					RawDefaultRule: option.RawDefaultRule{
+						IPIsPrivate: true,
+					},
+					RuleAction: option.RuleAction{
+						Action: C.RuleActionTypeRoute,
+						RouteOptions: option.RouteActionOptions{
+							Outbound: OutboundDirectTag,
+						},
+					},
+				},
+			},
+		)
+	}
 	if hopt.RoutingMode != "global" {
 		routeRules = append(routeRules, option.Rule{
 			Type: C.RuleTypeDefault,
@@ -629,26 +649,6 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 		// 		Outbound:  OutboundMainProxyTag,
 		// 	},
 		// },	}
-
-		if hopt.BypassLAN {
-			routeRules = append(
-				routeRules,
-				option.Rule{
-					Type: C.RuleTypeDefault,
-					DefaultOptions: option.DefaultRule{
-						RawDefaultRule: option.RawDefaultRule{
-							IPIsPrivate: true,
-						},
-						RuleAction: option.RuleAction{
-							Action: C.RuleActionTypeRoute,
-							RouteOptions: option.RouteActionOptions{
-								Outbound: OutboundDirectTag,
-							},
-						},
-					},
-				},
-			)
-		}
 
 		appRuleSetTags := make(map[string]string)
 		for _, rule := range hopt.Rules {
