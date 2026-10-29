@@ -43,7 +43,7 @@ func TestRoutingModeBuildAndSwitchBack(t *testing.T) {
 				t.Fatal("lost TUN loop prevention or node DNS bootstrap")
 			}
 			if mode == "global" {
-				if len(options.Route.Rules) != 3 || len(options.Route.RuleSet) != 0 {
+				if len(options.Route.Rules) != 4 || len(options.Route.RuleSet) != 0 {
 					t.Fatalf("unexpected global routing: %d rules, %d rule sets", len(options.Route.Rules), len(options.Route.RuleSet))
 				}
 				if options.Route.Rules[0].DefaultOptions.Action != C.RuleActionTypeSniff ||
@@ -54,6 +54,10 @@ func TestRoutingModeBuildAndSwitchBack(t *testing.T) {
 				if ipInfo.Action != C.RuleActionTypeRoute || ipInfo.RouteOptions.Outbound != OutboundDirectTag ||
 					!slices.Contains(ipInfo.DomainSuffix, "api.ip.sb") || !slices.Contains(ipInfo.DomainSuffix, "ipwho.is") {
 					t.Fatal("IP lookup domains must stay direct in global mode")
+				}
+				lan := options.Route.Rules[3].DefaultOptions
+				if !lan.IPIsPrivate || lan.RouteOptions.Outbound != OutboundDirectTag {
+					t.Fatal("explicit LAN bypass lost in global mode")
 				}
 				for _, rule := range options.DNS.Rules {
 					r := rule.DefaultOptions
@@ -118,6 +122,32 @@ func TestGlobalModeUsesSelectedProxyAndPreservesFakeDNS(t *testing.T) {
 			if fields["detour"] != OutboundSelectTag {
 				t.Fatalf("DNS bypassed selection: %s", data)
 			}
+		}
+	}
+}
+
+func TestGlobalModeLANBypassSwitch(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		h := DefaultSdmOptions()
+		h.RoutingMode = "global"
+		h.BypassLAN = enabled
+		o := &option.Options{}
+		ips := map[string][]string{}
+		if err := setDns(o, h, &ips); err != nil {
+			t.Fatal(err)
+		}
+		if err := setRoutingOptions(o, h, nil); err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, rule := range o.Route.Rules {
+			r := rule.DefaultOptions
+			if r.IPIsPrivate && r.RouteOptions.Outbound == OutboundDirectTag {
+				found = true
+			}
+		}
+		if found != enabled {
+			t.Fatal("global mode must respect explicit LAN bypass", enabled)
 		}
 	}
 }

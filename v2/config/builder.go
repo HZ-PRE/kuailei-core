@@ -575,7 +575,8 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 	})
 
 	// Global mode keeps DNS handling above, but never loads business routing
-	// rules or their rule sets (including imported, LAN and blocking rules).
+	// rules or their rule sets (including imported and blocking rules).
+	// An explicit BypassLAN preference still applies in global mode.
 	routeRules = append(routeRules, option.Rule{
 		Type: C.RuleTypeDefault,
 		DefaultOptions: option.DefaultRule{
@@ -651,7 +652,8 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 		// },	}
 
 		appRuleSetTags := make(map[string]string)
-		for _, rule := range hopt.Rules {
+		for i := range hopt.Rules {
+			rule := &hopt.Rules[i]
 			if !rule.Enabled {
 				continue
 			}
@@ -1071,7 +1073,7 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 	return nil
 }
 
-func convertAppRouteRule(rule Rule, knownRuleSets map[string]string) (option.Rule, []option.RuleSet, error) {
+func convertAppRouteRule(rule *Rule, knownRuleSets map[string]string) (option.Rule, []option.RuleSet, error) {
 	outboundName := OutboundSelectTag
 	ruleActionType := C.RuleActionTypeRoute
 	switch rule.Outbound {

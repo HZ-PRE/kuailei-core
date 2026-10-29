@@ -30,7 +30,7 @@ func TestSdmOptionsUnmarshalRules(t *testing.T) {
 		t.Fatalf("expected one rule, got %d", len(options.Rules))
 	}
 
-	rule := options.Rules[0]
+	rule := &options.Rules[0]
 	if !rule.Enabled || rule.Name != "custom route" || rule.Outbound != Outbound_direct {
 		t.Fatalf("unexpected rule metadata: %+v", rule)
 	}

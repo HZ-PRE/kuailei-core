@@ -166,7 +166,7 @@ func GetOverridableSdmOptions(overrides map[string][]string) *SdmOptions {
 
 	// Use reflection to iterate over the fields of SdmOptions
 	v := reflect.ValueOf(&overrideSdm).Elem()
-	t := reflect.TypeOf(overrideSdm)
+	t := reflect.TypeOf(&overrideSdm).Elem()
 
 	// Recursively set the fields that are marked as overridable
 	setOverridableFields(v, t, nestedOverrides)
