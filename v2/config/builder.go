@@ -403,20 +403,14 @@ func setInbound(options *option.Options, hopt *SdmOptions) error {
 
 			Options: &opts,
 		}
-		// switch hopt.IPv6Mode {
-		// case option.DomainStrategy(dns.DomainStrategyUseIPv4):
-		// 	opts.Address = []netip.Prefix{
-		// 		netip.MustParsePrefix("172.19.0.1/28"),
-		// 	}
-		// case option.DomainStrategy(dns.DomainStrategyUseIPv6):
-		// 	opts.Address = []netip.Prefix{
-		// 		netip.MustParsePrefix("fdfe:dcba:9876::1/126"),
-		// 	}
-		// default:
-
-		// }
 		opts.Address = []netip.Prefix{netip.MustParsePrefix("172.19.0.1/28")}
-		if ipv6Enable {
+		// Windows strict routing blocks IPv6 through a dynamic WFP filter when
+		// TUN has no IPv6 address. Do not advertise an unusable IPv6 default
+		// route to clients (e.g. WeChat's own IP discovery) in IPv4-only mode.
+		// Without that OS guard, retain capture plus the IPv6 rejection rule.
+		windowsBlocksIPv6 := C.IsWindows && hopt.StrictRoute &&
+			hopt.IPv6Mode == option.DomainStrategy(C.DomainStrategyIPv4Only)
+		if ipv6Enable && !windowsBlocksIPv6 {
 			opts.Address = append(opts.Address, netip.MustParsePrefix("fdfe:dcba:9876::1/126"))
 		}
 
@@ -573,6 +567,25 @@ func setRoutingOptions(options *option.Options, hopt *SdmOptions, inputRoute *op
 			},
 		},
 	})
+
+	// Keep IPv6 DNS reachable through the hijack rule, but reject literal IPv6
+	// destinations before any bypass, imported rule or proxy selection. Retain
+	// TUN capture or Windows strict-route WFP filters prevent IPv6 bypass.
+	if hopt.IPv6Mode == option.DomainStrategy(C.DomainStrategyIPv4Only) {
+		routeRules = append(routeRules, option.Rule{
+			Type: C.RuleTypeDefault,
+			DefaultOptions: option.DefaultRule{
+				RawDefaultRule: option.RawDefaultRule{IPVersion: 6},
+				RuleAction: option.RuleAction{
+					Action: C.RuleActionTypeReject,
+					RejectOptions: option.RejectActionOptions{
+						Method: C.RuleActionRejectMethodDefault,
+						NoDrop: true,
+					},
+				},
+			},
+		})
+	}
 
 	// Global mode keeps DNS handling above, but never loads business routing
 	// rules or their rule sets (including imported and blocking rules).
