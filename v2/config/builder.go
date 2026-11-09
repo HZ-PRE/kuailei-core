@@ -388,10 +388,11 @@ func setInbound(options *option.Options, hopt *SdmOptions) error {
 	if hopt.EnableTun {
 
 		opts := option.TunInboundOptions{
-			Stack:       hopt.TUNStack,
-			MTU:         hopt.MTU,
-			AutoRoute:   true,
-			StrictRoute: hopt.StrictRoute,
+			InterfaceName: "tun-sdm",
+			Stack:         hopt.TUNStack,
+			MTU:           hopt.MTU,
+			AutoRoute:     true,
+			StrictRoute:   hopt.StrictRoute,
 
 			// EndpointIndependentNat: true,
 			// GSO:                    runtime.GOOS != "windows",
