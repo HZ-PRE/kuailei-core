@@ -145,15 +145,6 @@ func collectProxyGroups(outbounds []adapter.Outbound, lookup func(string) (adapt
 			return nil
 		}
 		result := info(node)
-		if result.Detour != "" {
-			if detour, ok := lookup(result.Detour); ok {
-				result.TagDisplay += " → " + TrimTagName(detour.Tag())
-				result.Type += " → " + detour.DisplayType()
-			}
-		}
-		if onlySelected && result.GroupSelectedTagDisplay != nil && result.TagDisplay != *result.GroupSelectedTagDisplay {
-			result.TagDisplay += " → " + *result.GroupSelectedTagDisplay
-		}
 		converted[tag] = result
 		return result
 	}
